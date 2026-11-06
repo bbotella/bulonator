@@ -1,0 +1,28 @@
+name: Fallo técnico
+description: Un comando, la captura de una plataforma, el análisis multimedia o la instalación no funcionan
+title: "[Fallo] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: que
+    attributes:
+      label: ¿Qué ha pasado?
+      description: El comando ejecutado, lo que esperabas y lo que ha ocurrido.
+    validations:
+      required: true
+  - type: textarea
+    id: salida
+    attributes:
+      label: Salida o error
+      description: La salida JSON del script o el mensaje de error. Revisa que no contenga datos personales.
+      render: shell
+  - type: textarea
+    id: deps
+    attributes:
+      label: Salida de `python3 skills/bulonator/scripts/bulonator.py deps`
+      render: json
+  - type: input
+    id: entorno
+    attributes:
+      label: Sistema operativo, versión de Claude Code y método de instalación
+      placeholder: "macOS 15, Claude Code 2.1.x, plugin"

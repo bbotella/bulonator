@@ -1,0 +1,22 @@
+{
+  "name": "bulonator",
+  "version": "1.0.0",
+  "description": "Skills y agentes para verificar bulos con metodología periodística (Maldita.es, IFCN/EFCSN, Pandemia Digital): /bulonator <enlace> captura el contenido, lo contrasta con fuentes oficiales (BOE, INE, boletines autonómicos, Eurostat…), analiza imágenes, vídeos y audios, rastrea el origen, pasa una auditoría editorial y entrega un informe con fuentes y textos para compartir en redes.",
+  "author": {
+    "name": "Bernardo Botella"
+  },
+  "homepage": "https://github.com/TU-USUARIO/bulonator",
+  "repository": "https://github.com/TU-USUARIO/bulonator",
+  "license": "MIT",
+  "keywords": [
+    "fact-checking",
+    "verificacion",
+    "bulos",
+    "desinformacion",
+    "osint",
+    "periodismo",
+    "maldita",
+    "boe",
+    "ine"
+  ]
+}

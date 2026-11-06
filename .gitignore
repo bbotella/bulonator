@@ -1,0 +1,14 @@
+# Casos de verificación: contienen material capturado y pueden incluir datos personales
+bulonator-casos/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Claude Code (configuración local de cada persona)
+.claude/settings.local.json
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.part

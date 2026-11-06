@@ -1,0 +1,48 @@
+name: Error de verificación
+description: Un veredicto, un dato o una fuente de un informe de Bulonator es incorrecto
+title: "[Error de verificación] "
+labels: ["error-verificacion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias. Corregir errores forma parte de la metodología. **No incluyas datos personales** de terceros: anonimiza usuarios, teléfonos, matrículas y menores.
+  - type: input
+    id: entrada
+    attributes:
+      label: Contenido verificado
+      description: El enlace o la descripción de lo que se analizó. Si es posible, usa una copia archivada.
+    validations:
+      required: true
+  - type: input
+    id: veredicto
+    attributes:
+      label: Veredicto de Bulonator
+      placeholder: "❌ FALSO (descontextualizado), confianza ALTA"
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: ¿Qué es incorrecto?
+      description: Indica la frase, el dato, la fuente o la calificación concreta.
+    validations:
+      required: true
+  - type: textarea
+    id: pruebas
+    attributes:
+      label: Pruebas
+      description: Las fuentes (preferiblemente oficiales o primarias) que demuestran el error.
+    validations:
+      required: true
+  - type: textarea
+    id: archivos
+    attributes:
+      label: Fragmentos de informe.md o 03-auditoria.md
+      description: Opcional. Sin datos personales.
+      render: markdown
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Bulonator y modelo usado
+      placeholder: "1.0.0, Claude Opus 5.5"

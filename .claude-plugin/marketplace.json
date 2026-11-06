@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "bulonator",
+  "description": "Verificación de bulos con metodología periodística para Claude Code",
+  "owner": {
+    "name": "Bernardo Botella"
+  },
+  "plugins": [
+    {
+      "name": "bulonator",
+      "description": "Verifica si una noticia, tuit, imagen, vídeo o audio es un bulo: fuentes oficiales, análisis multimedia, rastreo del origen, auditoría editorial y textos para redes con fuentes citadas.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Bernardo Botella"
+      },
+      "category": "productivity",
+      "source": "./",
+      "homepage": "https://github.com/TU-USUARIO/bulonator"
+    }
+  ]
+}

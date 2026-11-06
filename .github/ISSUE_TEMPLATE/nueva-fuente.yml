@@ -1,0 +1,43 @@
+name: Nueva fuente oficial o verificador
+description: Propón una fuente oficial, una API de datos, un verificador o una web satírica para los catálogos
+title: "[Fuente] "
+labels: ["fuentes"]
+body:
+  - type: input
+    id: nombre
+    attributes:
+      label: Nombre de la fuente
+      placeholder: "Boletín Oficial de la Provincia de …"
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: URL oficial
+    validations:
+      required: true
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo
+      options:
+        - Boletín oficial / normativa
+        - Estadística oficial
+        - Organismo público / agencia
+        - API de datos abiertos
+        - Verificador (IFCN/EFCSN)
+        - Web satírica
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: uso
+    attributes:
+      label: ¿Qué tipo de afirmaciones permite verificar?
+    validations:
+      required: true
+  - type: textarea
+    id: acceso
+    attributes:
+      label: Acceso automático
+      description: ¿Tiene API o un buscador que funcione con WebFetch o curl? ¿Bloquea los clientes automáticos?

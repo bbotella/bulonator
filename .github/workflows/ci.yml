@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pruebas:
+    name: Pruebas (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compilar el script
+        run: python -m py_compile skills/bulonator/scripts/bulonator.py tests/*.py
+      - name: Pruebas unitarias y de estructura
+        run: python -m unittest discover -s tests -v
+      - name: Comprobar install.sh
+        run: |
+          bash -n install.sh
+          ./install.sh --dest "$RUNNER_TEMP/claude"
+          test -f "$RUNNER_TEMP/claude/skills/bulonator/SKILL.md"
+          test -f "$RUNNER_TEMP/claude/agents/bulonator-auditor.md"
+          ./install.sh --uninstall --dest "$RUNNER_TEMP/claude"
+
+  validar-plugin:
+    name: Validar el plugin con Claude Code
+    runs-on: ubuntu-latest
+    # No bloquea la fusión: depende de la versión publicada de la CLI de Claude Code
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate .
+      - run: claude plugin validate skills
+      - run: claude plugin validate agents

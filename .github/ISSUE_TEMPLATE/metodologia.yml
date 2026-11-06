@@ -1,0 +1,29 @@
+name: Propuesta de metodología
+description: Cambiar las calificaciones, las reglas de decisión, el proceso o las normas éticas
+title: "[Metodología] "
+labels: ["metodologia"]
+body:
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+    validations:
+      required: true
+  - type: textarea
+    id: motivo
+    attributes:
+      label: Motivo y casos en los que mejora el resultado
+    validations:
+      required: true
+  - type: textarea
+    id: referencias
+    attributes:
+      label: Referencias
+      description: Las metodologías de verificadores, estudios o códigos (IFCN, EFCSN) que la respaldan.
+  - type: checkboxes
+    id: neutralidad
+    attributes:
+      label: Neutralidad
+      options:
+        - label: La propuesta se aplica igual sea quien sea el que difunde o el afectado por el contenido
+          required: true
