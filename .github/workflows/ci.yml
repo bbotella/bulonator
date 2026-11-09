@@ -42,18 +42,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Instalar con los extras del motor
-        run: python -m pip install -e ".[motor,evals]"
+      - name: Instalar los dos paquetes (bulonator-nucleo y bulonator) en modo editable
+        run: python -m pip install -e . -e "./motor[evals]"
       - name: Todas las pruebas, incluidas las del motor (con modelos simulados, sin red)
         run: python -m unittest discover -s tests -v
-      - name: Construir la rueda y comprobar que lleva la metodología
+      - name: Construir las dos ruedas e instalar «bulonator» como desde PyPI
         run: |
           python -m pip wheel . --no-deps -w dist
-          python -m zipfile -l dist/bulonator-*.whl | grep -q "bulonator/_datos/references/reglas.json"
-          python -m zipfile -l dist/bulonator-*.whl | grep -q "bulonator/_datos/agents/bulonator-auditor.md"
+          python -m pip wheel ./motor --no-deps -w dist
+          python -m zipfile -l dist/bulonator_nucleo-*.whl | grep -q "bulonator/_datos/references/reglas.json"
+          python -m zipfile -l dist/bulonator_nucleo-*.whl | grep -q "bulonator/_datos/agents/bulonator-auditor.md"
+          if python -m zipfile -l dist/bulonator_nucleo-*.whl | grep -q "bulonator/motor/"; then echo "el núcleo no debe llevar el motor"; exit 1; fi
+          if python -m zipfile -l dist/bulonator-1*.whl | grep -q "bulonator/nucleo/"; then echo "el motor no debe llevar el núcleo"; exit 1; fi
           python -m venv "$RUNNER_TEMP/rueda"
-          "$RUNNER_TEMP/rueda/bin/pip" install -q dist/bulonator-*.whl
-          cd "$RUNNER_TEMP" && "$RUNNER_TEMP/rueda/bin/python" -c "from bulonator.nucleo import metodologia; m = metodologia(); assert '_datos' in str(m.referencias), m; print(m)"
+          "$RUNNER_TEMP/rueda/bin/pip" install -q --find-links dist bulonator
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/rueda/bin/python" -c "from bulonator import analizar; from bulonator.nucleo import metodologia; m = metodologia(); assert '_datos' in str(m.referencias), m; print(m)"
+          "$RUNNER_TEMP/rueda/bin/bulonator" analizar --help
 
   install-motor:
     name: install.sh --solo-motor (uv)

@@ -6,9 +6,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). E
 
 ### Añadido
 
-- **Paquete de Python `bulonator`** (`pyproject.toml`, orden `bulonator`):
-  - `bulonator.nucleo`, sin dependencias y con Python 3.9 o superior: las herramientas del antiguo script, ahora como funciones de librería;
-  - `bulonator.motor` (extra `[motor]`, Python 3.11 o superior): el análisis completo con Pydantic AI y cualquier modelo (Ollama, OpenAI, Gemini, Anthropic…). Admite un modelo por papel, `bulonator analizar`, `analizar()` y `analizar_sync()`, eventos de progreso, presupuesto de tokens y herramientas reutilizables. Ver `docs/motor.md`.
+- **Dos paquetes de Python** que se importan como `bulonator` (la orden se llama igual):
+  - `bulonator-nucleo` (`pyproject.toml`), sin dependencias y con Python 3.9 o superior: las herramientas del antiguo script, ahora como funciones de librería (`bulonator.nucleo`), y la metodología;
+  - `bulonator` (`motor/pyproject.toml`), Python 3.11 o superior, que depende del anterior (`pip install bulonator` lo trae todo). Es el motor, `bulonator.motor`: el análisis completo con Pydantic AI y cualquier modelo (Ollama, OpenAI, Gemini, Anthropic…). Admite un modelo por papel, `bulonator analizar`, `analizar()` y `analizar_sync()`, eventos de progreso, presupuesto de tokens y herramientas reutilizables. Ver `docs/motor.md`.
 - `leer`: abre una fuente, guarda su texto en `evidencias/paginas/` y la registra. `buscar`: búsqueda web con SearXNG, Brave o Tavily, anotada en `evidencias/busquedas.jsonl`.
 - `validar`: comprobaciones mecánicas del caso. Cada URL citada se abrió, cada cita literal está en la fuente guardada, `[n]` ↔ `E-…`, la calificación es coherente, la confianza está permitida y los textos caben en X.
 - `resultado`: `resultado.json`, el resumen del caso para otros programas, igual en Claude Code y en el motor.

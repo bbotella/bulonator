@@ -6,7 +6,7 @@ Gracias por ayudar a combatir la desinformación. Este proyecto tiene dos partes
 
 1. **Neutralidad.** No se aceptan cambios que traten de forma distinta los contenidos según quién los difunde o a quién afectan, ni listas de "fuentes enemigas". Las fuentes se valoran por criterios verificables: si son oficiales, si son primarias y si tienen desmentidos documentados.
 2. **Toda fuente nueva lleva su URL comprobada.** Ejecuta `python3 tests/check_links.py` antes de abrir el PR.
-3. **El núcleo (`src/bulonator/nucleo`) solo usa la biblioteca estándar de Python 3.9 o superior.** Las herramientas externas (ffmpeg, yt-dlp…) son opcionales y se detectan con `deps`. Si faltan, se declaran como limitación; el núcleo no debe fallar. Las dependencias del motor van en el extra `[motor]`.
+3. **El núcleo (`src/bulonator/nucleo`) solo usa la biblioteca estándar de Python 3.9 o superior.** Las herramientas externas (ffmpeg, yt-dlp…) son opcionales y se detectan con `deps`. Si faltan, se declaran como limitación; el núcleo no debe fallar. Las dependencias del motor van en `motor/pyproject.toml` (el paquete `bulonator`).
 4. **Sin pruebas no hay fusión.** Todo cambio en el núcleo o en el motor incluye pruebas en `tests/` que funcionan sin red. Las del motor usan modelos simulados (`FunctionModel`), nunca modelos reales.
 5. **Una regla, un sitio.** Una regla nueva se define una sola vez, en negrita y con su identificador (`**[EV-15]**`), en el archivo de su prefijo. Una cifra o una lista cerrada nueva va en `reglas.json`. En los demás sitios se cita por el identificador; `tests/test_metodologia.py` falla si una regla se repite.
 6. **No se debilita la cadena de evidencias.** Ningún cambio puede permitir que un texto final contenga afirmaciones sin una entrada `E-…`, ni saltarse la auditoría.
@@ -28,7 +28,7 @@ Gracias por ayudar a combatir la desinformación. Este proyecto tiene dos partes
 git clone https://github.com/bbotella/bulonator.git
 cd bulonator
 python3 -m unittest discover -s tests -v       # núcleo, metodología y estructura (sin red)
-python3.11 -m venv .venv && .venv/bin/pip install -e ".[motor,evals]"
+python3.11 -m venv .venv && .venv/bin/pip install -e . -e "./motor[evals]"
 .venv/bin/python -m unittest discover -s tests -v   # todo, incluido el motor con modelos simulados
 python3 tests/check_links.py                   # enlaces de la documentación (con red)
 claude plugin validate .                       # manifiestos del plugin y del marketplace
@@ -54,7 +54,8 @@ Se sigue [SemVer](https://semver.org/lang/es/). Al publicar una versión, actual
 
 - `version` en `.claude-plugin/plugin.json`;
 - `version` en `.claude-plugin/marketplace.json`;
-- `__version__` en `src/bulonator/__init__.py` (también es la versión del paquete);
+- `__version__` en `src/bulonator/__init__.py` (versión de `bulonator-nucleo`);
+- `__version__` en `motor/src/bulonator/motor/__init__.py` (versión de `bulonator`) y la dependencia `bulonator-nucleo==…` de `motor/pyproject.toml`;
 - `CHANGELOG.md`.
 
-La prueba `test_estructura` comprueba que las tres versiones coinciden.
+La prueba `test_estructura` comprueba que todas las versiones coinciden. Publica siempre los dos paquetes juntos.

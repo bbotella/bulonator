@@ -1,17 +1,19 @@
+# Paquete «bulonator-nucleo»: el núcleo sin dependencias (lo que usa el plugin de Claude Code).
+# El motor es el paquete «bulonator», en motor/pyproject.toml, que depende de este.
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "bulonator"
+name = "bulonator-nucleo"
 dynamic = ["version"]
-description = "Verificación de bulos con la metodología del periodismo de verificación (Maldita.es, IFCN): núcleo sin dependencias y motor multimodelo con Pydantic AI."
-readme = "README.md"
+description = "Núcleo de Bulonator sin dependencias: captura, fuentes oficiales (BOE, INE), análisis multimedia, registro de fuentes y validación de casos de verificación de bulos."
+readme = "docs/pypi/bulonator-nucleo.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.9"
 authors = [{ name = "Bernardo Botella" }]
-keywords = ["fact-checking", "verificación", "bulos", "desinformación", "pydantic-ai", "llm", "ollama"]
+keywords = ["fact-checking", "verificación", "bulos", "desinformación", "boe", "ine", "osint"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -20,25 +22,18 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Text Processing",
 ]
-# El núcleo solo usa la biblioteca estándar: el plugin de Claude Code funciona sin instalar nada.
+# Solo la biblioteca estándar: el plugin de Claude Code funciona sin instalar nada.
 dependencies = []
 
 [project.optional-dependencies]
-# Motor de análisis con modelos de lenguaje. Necesita Python 3.11 o superior (lo exige pydantic-ai).
-# El extra "openai" cubre también Ollama y cualquier servidor compatible con la API de OpenAI.
-motor = [
-    "pydantic-ai-slim[openai,google,anthropic]>=2.66,<3",
-    "pypdf>=5",
-]
 pdf = ["pypdf>=5"]
-evals = ["bulonator[motor]", "pydantic-evals>=2.66,<3"]
 
 [project.scripts]
 bulonator = "bulonator.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/bbotella/bulonator"
-Documentation = "https://github.com/bbotella/bulonator/blob/main/docs/motor.md"
+Documentation = "https://github.com/bbotella/bulonator#readme"
 Issues = "https://github.com/bbotella/bulonator/issues"
 
 [tool.hatch.version]
@@ -47,7 +42,7 @@ path = "src/bulonator/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/bulonator"]
 
-# La metodología tiene una sola copia (la del plugin); la rueda la incluye para el motor.
+# La metodología tiene una sola copia (la del plugin); la rueda la incluye para el núcleo y el motor.
 [tool.hatch.build.targets.wheel.force-include]
 "skills/bulonator/references" = "bulonator/_datos/references"
 "skills/bulonator/templates" = "bulonator/_datos/templates"

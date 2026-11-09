@@ -45,10 +45,27 @@ class TestManifiestos(unittest.TestCase):
         self.assertEqual(entry["version"], plugin["version"], "la versión del marketplace no coincide con plugin.json")
         self.assertEqual(entry["source"], "./")
 
-    def test_version_del_paquete(self):
-        plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        init = (ROOT / "src" / "bulonator" / "__init__.py").read_text(encoding="utf-8")
-        self.assertIn(f'__version__ = "{plugin["version"]}"', init)
+    def test_versiones_a_la_par(self):
+        """El plugin, bulonator-nucleo y bulonator (el motor) llevan la misma versión, y el motor exige
+        exactamente ese núcleo."""
+        version = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+        nucleo = (ROOT / "src" / "bulonator" / "__init__.py").read_text(encoding="utf-8")
+        motor = (ROOT / "motor" / "src" / "bulonator" / "motor" / "__init__.py").read_text(encoding="utf-8")
+        self.assertIn(f'__version__ = "{version}"', nucleo)
+        self.assertIn(f'__version__ = "{version}"', motor)
+        self.assertIn(f'"bulonator-nucleo=={version}"', (ROOT / "motor" / "pyproject.toml").read_text(encoding="utf-8"))
+
+    def test_dos_paquetes(self):
+        raiz = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        motor = (ROOT / "motor" / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('name = "bulonator-nucleo"', raiz)
+        self.assertIn("dependencies = []", raiz)
+        self.assertIn('name = "bulonator"', motor)
+        self.assertIn('requires-python = ">=3.11"', motor)
+        # El espacio de nombres compartido: el núcleo aporta bulonator/__init__.py y el motor solo su subpaquete
+        self.assertFalse((ROOT / "motor" / "src" / "bulonator" / "__init__.py").exists())
+        self.assertFalse((ROOT / "src" / "bulonator" / "motor").exists())
+        self.assertEqual((ROOT / "LICENSE").read_text(encoding="utf-8"), (ROOT / "motor" / "LICENSE").read_text(encoding="utf-8"))
 
 
 class TestSkills(unittest.TestCase):

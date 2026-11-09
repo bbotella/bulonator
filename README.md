@@ -103,7 +103,7 @@ flowchart LR
 | [`bulonator-origen`](agents/bulonator-origen.md) | Agente | Desmentidos previos, primera aparición, fuente y propagación |
 | [`bulonator-auditor`](agents/bulonator-auditor.md) | Agente | Editor con veto: trazabilidad, reapertura de fuentes, metodología y ética |
 | [`bulonator.nucleo`](src/bulonator/nucleo/) | Paquete (solo biblioteca estándar de Python) | Captura de redes y webs, `leer` y `buscar` con registro en el caso, multimedia, Wayback, dominios, BOE, INE, búsqueda inversa, recuento de caracteres, `validar` y `resultado`. El plugin lo usa con el lanzador [`bulonator.py`](skills/bulonator/scripts/bulonator.py) |
-| [`bulonator.motor`](src/bulonator/motor/) | Paquete (Pydantic AI, extra `[motor]`) | El mismo análisis fuera de Claude Code, con cualquier modelo ([docs/motor.md](docs/motor.md)) |
+| [`bulonator.motor`](motor/src/bulonator/motor/) | Paquete (Pydantic AI) | El mismo análisis fuera de Claude Code, con cualquier modelo ([docs/motor.md](docs/motor.md)) |
 
 Los verificadores, los analistas multimedia y el rastreo del origen trabajan **en paralelo**. Antes de la auditoría, `validar` comprueba en código que cada URL citada se abrió y que cada cita literal aparece en la página guardada. Más detalle en [docs/arquitectura.md](docs/arquitectura.md).
 
@@ -185,10 +185,10 @@ claude --plugin-dir ./bulonator
 ```bash
 ./install.sh --motor        # Claude Code y, además, la orden «bulonator» con el motor (uv o pipx)
 ./install.sh --solo-motor   # solo el motor
-uv add "bulonator[motor] @ git+https://github.com/bbotella/bulonator"   # como librería en otro proyecto
+pip install bulonator       # como librería en otro proyecto (trae también bulonator-nucleo)
 ```
 
-Necesita Python 3.11 o superior. La configuración de los modelos y del buscador está en [docs/motor.md](docs/motor.md).
+Necesita Python 3.11 o superior. Hay dos paquetes en PyPI: `bulonator` (el motor, que incluye el núcleo) y `bulonator-nucleo` (solo las herramientas, sin dependencias y con Python 3.9 o superior). La configuración de los modelos y del buscador está en [docs/motor.md](docs/motor.md).
 
 ### Permisos y claves opcionales
 
@@ -275,13 +275,14 @@ Cada papel (captura, desglose, verificador, multimedia, origen, redactor, audito
 │   ├── verificar-dato/SKILL.md
 │   └── verificar-multimedia/SKILL.md
 ├── agents/                      # los 5 subagentes (y la metodología de cada papel del motor)
-├── src/bulonator/
+├── src/bulonator/               # paquete «bulonator-nucleo» (pyproject.toml de la raíz)
 │   ├── nucleo/                  # herramientas sin dependencias (Python 3.9+)
-│   ├── motor/                   # motor multimodelo con Pydantic AI (extra [motor], Python 3.11+)
 │   └── cli.py                   # orden «bulonator»
+├── motor/                       # paquete «bulonator» (motor/pyproject.toml): depende del núcleo
+│   └── src/bulonator/motor/     # motor multimodelo con Pydantic AI (Python 3.11+)
 ├── docs/                        # arquitectura, instalación, motor, limitaciones
 ├── tests/                       # núcleo, metodología, motor (modelos simulados) y estructura
-├── pyproject.toml
+├── pyproject.toml               # bulonator-nucleo
 ├── install.sh
 └── .github/                     # CI y plantillas de issues y PR
 ```
@@ -302,7 +303,7 @@ Resumen; el detalle está en [docs/limitaciones.md](docs/limitaciones.md):
 Las contribuciones son bienvenidas: nuevas fuentes oficiales, capturadores para otras plataformas, mejoras de método o correcciones. Lee [CONTRIBUTING.md](CONTRIBUTING.md). Si un veredicto te parece erróneo, abre un issue de **error de verificación**: la política de correcciones forma parte de la metodología.
 
 ```bash
-python3 -m unittest discover -s tests -v   # pruebas sin red (las del motor necesitan el extra [motor])
+python3 -m unittest discover -s tests -v   # pruebas sin red (las del motor necesitan pip install -e . -e ./motor)
 python3 tests/check_links.py               # comprueba los enlaces de las referencias (con red)
 ```
 

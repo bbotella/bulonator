@@ -10,10 +10,13 @@ Uso básico::
     caso.resultado.publicaciones     # textos para redes
     caso.aprobado                    # auditoría superada y validación sin errores
 
-Necesita el extra ``[motor]`` (Python 3.11 o superior). La librería no publica nada: quien la usa
-decide qué hacer con el caso, y la recomendación es que una persona lo revise antes de publicarlo.
+Es el paquete ``bulonator`` de PyPI (``pip install bulonator``, Python 3.11 o superior), que depende
+de ``bulonator-nucleo``. La librería no publica nada: quien la usa decide qué hacer con el caso, y la
+recomendación es que una persona lo revise antes de publicarlo.
 """
 import os
+
+__version__ = "1.1.0"
 
 # El aviso de bienvenida de Pydantic AI saldría por la salida estándar, que la CLI usa para el JSON
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")

@@ -1,6 +1,6 @@
 """Pruebas del motor con modelos simulados (FunctionModel de Pydantic AI): sin red y sin modelos reales.
 
-Se omiten si no está instalado el extra [motor] (Python 3.11 o superior).
+Se omiten si no está instalado pydantic-ai (paquete «bulonator», Python 3.11 o superior).
 Ejecuta: python -m unittest discover -s tests -v
 """
 from __future__ import annotations
@@ -187,7 +187,7 @@ def servicios_falsos(vacia: bool = False):
                      dominio=no_usar, factcheck=no_usar, buscar_imagen=no_usar, analizar_media=no_usar)
 
 
-@unittest.skipUnless(HAY_MOTOR, "requiere el extra [motor] y Python 3.11+")
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
 class BaseMotor(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -301,7 +301,7 @@ class TestAnalisisCompleto(BaseMotor):
         self.assertTrue((caso.ruta / "resultado.json").is_file())
 
 
-@unittest.skipUnless(HAY_MOTOR, "requiere el extra [motor] y Python 3.11+")
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
 class TestPiezas(BaseMotor):
     def ctx(self, **kw):
         caso = Path(nucleo.crear_caso("x", self.tmp.name)["caso"])
@@ -421,7 +421,7 @@ class TestPiezas(BaseMotor):
 PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 64
 
 
-@unittest.skipUnless(HAY_MOTOR, "requiere el extra [motor] y Python 3.11+")
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
 class TestRamas(BaseMotor):
     """Caminos menos frecuentes del proceso: multimedia, ronda dirigida, fallos, presupuesto y búsqueda nativa."""
 
@@ -546,7 +546,7 @@ class TestRamas(BaseMotor):
         self.assertIsNone(visto["temperatura"])
 
 
-@unittest.skipUnless(HAY_MOTOR, "requiere el extra [motor] y Python 3.11+")
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
 class TestEnvoltorios(BaseMotor):
     """Cada herramienta llama al núcleo con el caso y deja constancia de la consulta."""
 
@@ -603,7 +603,7 @@ class TestEnvoltorios(BaseMotor):
         self.assertIn("error", H.capturar(ctx, "https://x.com/a/status/2", "b"))
 
 
-@unittest.skipUnless(HAY_MOTOR, "requiere el extra [motor] y Python 3.11+")
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
 class TestCasosLimite(BaseMotor):
     def test_config_toml_con_variables_y_modelos_objeto(self):
         toml = Path(self.tmp.name, "c.toml")
@@ -671,7 +671,7 @@ class TestCasosLimite(BaseMotor):
         self.assertIn("no se hicieron búsquedas", sin_nada)
 
 
-@unittest.skipUnless(HAY_MOTOR, "requiere el extra [motor] y Python 3.11+")
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
 class TestCLIMotor(BaseMotor):
     def run_cli(self, *argv):
         buf = io.StringIO()

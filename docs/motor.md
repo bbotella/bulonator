@@ -40,10 +40,18 @@ El motor necesita **Python 3.11 o superior**, porque lo exige Pydantic AI. El n�
 | Para… | Orden |
 |---|---|
 | Tener la orden `bulonator` en la terminal | `./install.sh --motor` (Claude Code y motor) o `./install.sh --solo-motor`. Usa [uv](https://docs.astral.sh/uv/) o pipx y deja el motor en un entorno aislado |
-| Usarlo como librería en otro proyecto | `uv add "bulonator[motor] @ git+https://github.com/bbotella/bulonator"` o `pip install "bulonator[motor] @ git+https://github.com/bbotella/bulonator"` |
-| Desarrollar | `pip install -e ".[motor,evals]"` en un entorno virtual con Python 3.11 o superior |
+| Usarlo como librería en otro proyecto | `pip install bulonator` o `uv add bulonator` |
+| Usar la versión de GitHub | `pip install "bulonator-nucleo @ git+https://github.com/bbotella/bulonator" "bulonator @ git+https://github.com/bbotella/bulonator#subdirectory=motor"` |
+| Desarrollar | `pip install -e . -e "./motor[evals]"` en un entorno virtual con Python 3.11 o superior |
 
-El extra `[motor]` instala `pydantic-ai-slim` con los proveedores OpenAI (que también cubre Ollama), Google y Anthropic, y `pypdf` para leer documentos PDF.
+Bulonator se publica en dos paquetes, y los dos se importan como `bulonator`:
+
+| Paquete | Contiene | Python | Dependencias |
+|---|---|---|---|
+| [`bulonator`](https://pypi.org/project/bulonator/) | El motor (`bulonator.motor`) | 3.11+ | `bulonator-nucleo` (de la misma versión), `pydantic-ai-slim` con OpenAI (que también cubre Ollama), Google y Anthropic, y `pypdf` |
+| [`bulonator-nucleo`](https://pypi.org/project/bulonator-nucleo/) | El núcleo (`bulonator.nucleo`), la orden `bulonator` y la metodología | 3.9+ | Ninguna |
+
+`pip install bulonator` instala los dos. Si solo necesitas las herramientas, sin modelos, instala `bulonator-nucleo`.
 
 Las herramientas externas son las mismas que para el plugin: `yt-dlp`, `ffmpeg` y, si quieres, `exiftool`, `c2patool` y `whisper`. Compruébalas con `bulonator deps`.
 
@@ -270,7 +278,7 @@ respuesta = agente.run_sync("¿Qué dice el BOE sobre el ingreso mínimo vital?"
 Las pruebas del motor usan los modelos simulados de Pydantic AI (`FunctionModel`): no llaman a ningún modelo ni necesitan red.
 
 ```bash
-pip install -e ".[motor]"
+pip install -e . -e ./motor
 python -m unittest discover -s tests -v
 ```
 
@@ -283,7 +291,7 @@ python -m unittest discover -s tests -v
 - el fallo de un verificador o del auditor;
 - el presupuesto de tokens agotado y la búsqueda nativa.
 
-Para comparar modelos con casos reales ya verificados, el extra `[evals]` instala `pydantic-evals`.
+Para comparar modelos con casos reales ya verificados, `pip install "bulonator[evals]"` añade `pydantic-evals`.
 
 ## Limitaciones
 

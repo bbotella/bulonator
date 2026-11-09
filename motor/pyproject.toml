@@ -1,0 +1,50 @@
+# Paquete «bulonator»: el motor de análisis con modelos de lenguaje (Pydantic AI).
+# Depende de «bulonator-nucleo» (pyproject.toml de la raíz), que trae el núcleo, la orden «bulonator»
+# y la metodología. Las dos versiones van siempre a la par (tests/test_estructura.py lo comprueba).
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bulonator"
+dynamic = ["version"]
+description = "Verificación de bulos con la metodología del periodismo de verificación (Maldita.es, IFCN) y tus propios modelos: Ollama, OpenAI, Gemini o Anthropic. Librería y orden de terminal."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+# Lo exige pydantic-ai. Con Python 3.9 o 3.10, usa bulonator-nucleo.
+requires-python = ">=3.11"
+authors = [{ name = "Bernardo Botella" }]
+keywords = ["fact-checking", "verificación", "bulos", "desinformación", "pydantic-ai", "llm", "ollama"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Natural Language :: Spanish",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Text Processing",
+]
+# El extra «openai» de pydantic-ai cubre también Ollama y cualquier servidor compatible con la API de OpenAI.
+dependencies = [
+    "bulonator-nucleo==1.1.0",
+    "pydantic-ai-slim[openai,google,anthropic]>=2.66,<3",
+    "pypdf>=5",
+]
+
+[project.optional-dependencies]
+evals = ["pydantic-evals>=2.66,<3"]
+
+[project.urls]
+Homepage = "https://github.com/bbotella/bulonator"
+Documentation = "https://github.com/bbotella/bulonator/blob/main/docs/motor.md"
+Issues = "https://github.com/bbotella/bulonator/issues"
+
+[tool.hatch.version]
+path = "src/bulonator/motor/__init__.py"
+
+# Solo bulonator/motor: bulonator/__init__.py y el núcleo los instala bulonator-nucleo.
+[tool.hatch.build.targets.wheel]
+packages = ["src/bulonator"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md", "LICENSE", "pyproject.toml"]

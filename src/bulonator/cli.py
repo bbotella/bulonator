@@ -19,7 +19,7 @@ Subcomandos del núcleo (sin dependencias, Python 3.9 o superior):
   validar         Comprobaciones mecánicas de un caso (evidencias, citas, fuentes, calificación).
   resultado       Monta resultado.json a partir de los documentos del caso.
 
-Con el extra [motor] (Python 3.11 o superior):
+Con el motor (paquete «bulonator», Python 3.11 o superior):
   analizar        Analiza un enlace, archivo o texto de principio a fin con modelos de lenguaje.
 """
 from __future__ import annotations
@@ -152,7 +152,7 @@ def cmd_analizar(args) -> int:
         from .motor.cli import ejecutar
     except ImportError as e:
         emit({"error": "el motor no está instalado o necesita Python 3.11 o superior",
-              "detalle": str(e), "instalacion": "pip install 'bulonator[motor]'  (o ./install.sh --motor)"})
+              "detalle": str(e), "instalacion": "pip install bulonator  (o ./install.sh --motor)"})
         return 3
     return ejecutar(args, emit)
 
@@ -277,7 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--idioma", default="es")
     s.set_defaults(func=cmd_resultado)
 
-    s = sub.add_parser("analizar", help="análisis completo con modelos de lenguaje (extra [motor])")
+    s = sub.add_parser("analizar", help="análisis completo con modelos de lenguaje (paquete bulonator)")
     s.add_argument("entrada", help="URL, ruta a imagen/vídeo/audio o texto entre comillas")
     s.add_argument("--config", help="archivo TOML de configuración (ver docs/motor.md)")
     s.add_argument("--modelo", help="modelo por defecto para todos los papeles (p. ej. ollama:gpt-oss:20b)")

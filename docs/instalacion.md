@@ -55,7 +55,7 @@ El instalador copia el núcleo del paquete junto al lanzador del skill, en `skil
 ./install.sh --uninstall --motor
 ```
 
-Usa `uv tool install` o, si no hay uv, `pipx`. Para usarlo como librería en otro proyecto: `uv add "bulonator[motor] @ git+https://github.com/bbotella/bulonator"`. La configuración está en [motor.md](motor.md).
+Usa `uv tool install` o, si no hay uv, `pipx`. Para usarlo como librería en otro proyecto: `pip install bulonator`, que trae también `bulonator-nucleo`. Si solo quieres las herramientas, sin modelos, instala `bulonator-nucleo`, que funciona con Python 3.9 o superior. La configuración está en [motor.md](motor.md).
 
 ### Sin instalar (para probar o desarrollar)
 

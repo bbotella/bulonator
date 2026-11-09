@@ -8,7 +8,7 @@ Bulonator tiene tres capas y dos maneras de usarse:
 |---|---|---|
 | Metodología | `skills/bulonator/references/`, `templates/` y `agents/` | Las reglas, las cifras (`reglas.json`), las plantillas y el papel de cada agente. Cada regla tiene un identificador y vive en un solo archivo |
 | Núcleo | `src/bulonator/nucleo/` | Operaciones deterministas sin dependencias (Python 3.9+): captura, `leer`, `buscar`, fuentes oficiales, multimedia, Wayback, `validar` y `resultado` |
-| Orquestación | `skills/*/SKILL.md` + subagentes (Claude Code) o `src/bulonator/motor/` (Pydantic AI) | Quién decide qué paso viene después y con qué modelo |
+| Orquestación | `skills/*/SKILL.md` + subagentes (Claude Code) o `motor/src/bulonator/motor/` (Pydantic AI) | Quién decide qué paso viene después y con qué modelo |
 
 ```mermaid
 flowchart TB
@@ -28,6 +28,8 @@ flowchart TB
     N --> C[("Carpeta del caso<br/>+ resultado.json")]
     C --> S["Tus servicios: API, colas, web, bots"]
 ```
+
+Hay dos paquetes de Python que comparten el espacio de nombres `bulonator`. `bulonator-nucleo` (el `pyproject.toml` de la raíz) aporta `bulonator`, `bulonator.nucleo`, la orden `bulonator` y la metodología. `bulonator` (`motor/pyproject.toml`) aporta solo `bulonator.motor` y depende del primero. En un clon del repositorio, `bulonator/__init__.py` añade `motor/src` a su ruta, así que las pruebas y el desarrollo funcionan sin instalar nada.
 
 Los dos orquestadores escriben **la misma carpeta de caso**, y `validar` y `resultado` la comprueban y la resumen con el mismo código. A un programa que lea `resultado.json` le da igual quién hizo el caso.
 
@@ -75,7 +77,7 @@ sequenceDiagram
 
 ## En el motor
 
-El motor (`src/bulonator/motor/`) fija las fases en código. El modelo decide solo dentro de cada fase y recibe herramientas tipadas, nunca una terminal. [docs/motor.md](motor.md) lo explica con detalle.
+El motor (`motor/src/bulonator/motor/`) fija las fases en código. El modelo decide solo dentro de cada fase y recibe herramientas tipadas, nunca una terminal. [docs/motor.md](motor.md) lo explica con detalle.
 
 | Módulo | Qué hace |
 |---|---|

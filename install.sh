@@ -92,25 +92,25 @@ install_motor() {
   tool="$(motor_tool)"
   echo
   echo "Instalando el motor (orden «bulonator», Python 3.11 o superior)…"
+  # La orden «bulonator» la aporta bulonator-nucleo (la raíz del repositorio); el motor (paquete
+  # «bulonator», en motor/) se añade al mismo entorno aislado.
   case "$tool" in
     uv)
       if [[ "$MODE" == "link" ]]; then
-        uv tool install --force --python ">=3.11" --editable "$REPO[motor]"
+        uv tool install --force --python ">=3.11" --editable "$REPO" --with-editable "$REPO/motor"
       else
-        uv tool install --force --python ">=3.11" "$REPO[motor]"
+        uv tool install --force --python ">=3.11" "$REPO" --with "$REPO/motor"
       fi ;;
     pipx)
-      local py
+      local py editable=()
       py="$(command -v python3.13 || command -v python3.12 || command -v python3.11 || true)"
       [[ -n "$py" ]] || { echo "Error: pipx necesita Python 3.11 o superior (python3.11, 3.12 o 3.13)." >&2; return 1; }
-      if [[ "$MODE" == "link" ]]; then
-        pipx install --force --python "$py" --editable "$REPO[motor]"
-      else
-        pipx install --force --python "$py" "$REPO[motor]"
-      fi ;;
+      [[ "$MODE" == "link" ]] && editable=(--editable)
+      pipx install --force --python "$py" "${editable[@]}" "$REPO"
+      pipx inject bulonator-nucleo "${editable[@]}" "$REPO/motor" ;;
     *)
       echo "No se ha encontrado uv ni pipx. Instala uno de los dos (https://docs.astral.sh/uv/) o, en tu entorno:"
-      echo "  pip install \"$REPO[motor]\""
+      echo "  pip install \"$REPO\" \"$REPO/motor\"     (o, desde PyPI: pip install bulonator)"
       return 1 ;;
   esac
   echo "Motor instalado. Prueba:  bulonator analizar --help   (configuración: docs/motor.md)"
@@ -120,8 +120,8 @@ uninstall_motor() {
   local tool
   tool="$(motor_tool)"
   case "$tool" in
-    uv) uv tool uninstall bulonator 2>/dev/null && echo "  − motor (uv tool)" || true ;;
-    pipx) pipx uninstall bulonator 2>/dev/null && echo "  − motor (pipx)" || true ;;
+    uv) uv tool uninstall bulonator-nucleo 2>/dev/null && echo "  − motor (uv tool)" || true ;;
+    pipx) pipx uninstall bulonator-nucleo 2>/dev/null && echo "  − motor (pipx)" || true ;;
   esac
 }
 
