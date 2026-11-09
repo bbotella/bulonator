@@ -106,6 +106,42 @@ class TestAgentes(unittest.TestCase):
                 self.assertIn("## Seguridad", path.read_text(encoding="utf-8"))
 
 
+def valores_yaml_sin_comillas(texto: str) -> list:
+    """Líneas ``clave: valor`` cuyo valor sin comillas contiene ': ' (YAML lo rechaza o lo malinterpreta).
+
+    Ignora el contenido de los bloques literales (``run: |``) y los comentarios finales.
+    """
+    problemas, bloque = [], None
+    for n, linea in enumerate(texto.splitlines(), 1):
+        sangria = len(linea) - len(linea.lstrip())
+        if bloque is not None:
+            if not linea.strip() or sangria > bloque:
+                continue
+            bloque = None
+        m = re.match(r"^\s*(?:-\s+)?[\w.-]+:\s+(.*)$", linea)
+        if not m:
+            continue
+        valor = re.sub(r"\s+#.*$", "", m.group(1)).strip()
+        if valor[:1] in ("|", ">"):
+            bloque = sangria
+        elif valor and valor[0] not in "'\"[{&*!" and ": " in valor:
+            problemas.append(f"línea {n}: {linea.strip()}")
+    return problemas
+
+
+class TestYamlDeGitHub(unittest.TestCase):
+    def test_valores_con_dos_puntos_entre_comillas(self):
+        archivos = sorted((ROOT / ".github").rglob("*.yml"))
+        self.assertTrue(archivos)
+        for path in archivos:
+            with self.subTest(archivo=path.relative_to(ROOT).as_posix()):
+                self.assertEqual(valores_yaml_sin_comillas(path.read_text(encoding="utf-8")), [])
+
+    def test_el_comprobador_detecta_el_error(self):
+        malo = "steps:\n  - name: Comprobar (falla: 404)\n  - run: |\n      echo a: b\n  - name: \"bien: así\"\n"
+        self.assertEqual(valores_yaml_sin_comillas(malo), ["línea 2: - name: Comprobar (falla: 404)"])
+
+
 class TestInstalador(unittest.TestCase):
     def test_listas_del_instalador(self):
         text = (ROOT / "install.sh").read_text(encoding="utf-8")

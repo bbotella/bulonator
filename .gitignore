@@ -20,3 +20,4 @@ skills/bulonator/scripts/_vendor/
 .DS_Store
 Thumbs.db
 *.part
+.idea/
