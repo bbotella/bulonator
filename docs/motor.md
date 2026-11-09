@@ -40,7 +40,7 @@ El motor necesita **Python 3.11 o superior**, porque lo exige Pydantic AI. El n�
 | Para… | Orden |
 |---|---|
 | Tener la orden `bulonator` en la terminal | `./install.sh --motor` (Claude Code y motor) o `./install.sh --solo-motor`. Usa [uv](https://docs.astral.sh/uv/) o pipx y deja el motor en un entorno aislado |
-| Usarlo como librería en otro proyecto | `uv add "bulonator[motor] @ git+https://github.com/TU-USUARIO/bulonator"` o `pip install "bulonator[motor] @ git+https://github.com/TU-USUARIO/bulonator"` |
+| Usarlo como librería en otro proyecto | `uv add "bulonator[motor] @ git+https://github.com/bbotella/bulonator"` o `pip install "bulonator[motor] @ git+https://github.com/bbotella/bulonator"` |
 | Desarrollar | `pip install -e ".[motor,evals]"` en un entorno virtual con Python 3.11 o superior |
 
 El extra `[motor]` instala `pydantic-ai-slim` con los proveedores OpenAI (que también cubre Ollama), Google y Anthropic, y `pypdf` para leer documentos PDF.

@@ -157,7 +157,7 @@ pipx install openai-whisper
 Dentro de Claude Code:
 
 ```text
-/plugin marketplace add TU-USUARIO/bulonator
+/plugin marketplace add bbotella/bulonator
 /plugin install bulonator@bulonator
 ```
 
@@ -166,7 +166,7 @@ Los comandos quedan disponibles como `/bulonator`, `/verificar-dato` y `/verific
 ### Opción B: como skills de usuario (`install.sh`)
 
 ```bash
-git clone https://github.com/TU-USUARIO/bulonator.git
+git clone https://github.com/bbotella/bulonator.git
 cd bulonator
 ./install.sh            # copia las skills y los agentes a ~/.claude
 ./install.sh --link     # o crea enlaces simbólicos (para desarrollar)
@@ -176,7 +176,7 @@ cd bulonator
 ### Opción C: probar sin instalar
 
 ```bash
-git clone https://github.com/TU-USUARIO/bulonator.git
+git clone https://github.com/bbotella/bulonator.git
 claude --plugin-dir ./bulonator
 ```
 
@@ -185,7 +185,7 @@ claude --plugin-dir ./bulonator
 ```bash
 ./install.sh --motor        # Claude Code y, además, la orden «bulonator» con el motor (uv o pipx)
 ./install.sh --solo-motor   # solo el motor
-uv add "bulonator[motor] @ git+https://github.com/TU-USUARIO/bulonator"   # como librería en otro proyecto
+uv add "bulonator[motor] @ git+https://github.com/bbotella/bulonator"   # como librería en otro proyecto
 ```
 
 Necesita Python 3.11 o superior. La configuración de los modelos y del buscador está en [docs/motor.md](docs/motor.md).

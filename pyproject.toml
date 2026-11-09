@@ -37,9 +37,9 @@ evals = ["bulonator[motor]", "pydantic-evals>=2.66,<3"]
 bulonator = "bulonator.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/TU-USUARIO/bulonator"
-Documentation = "https://github.com/TU-USUARIO/bulonator/blob/main/docs/motor.md"
-Issues = "https://github.com/TU-USUARIO/bulonator/issues"
+Homepage = "https://github.com/bbotella/bulonator"
+Documentation = "https://github.com/bbotella/bulonator/blob/main/docs/motor.md"
+Issues = "https://github.com/bbotella/bulonator/issues"
 
 [tool.hatch.version]
 path = "src/bulonator/__init__.py"

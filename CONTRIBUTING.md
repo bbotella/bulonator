@@ -25,7 +25,7 @@ Gracias por ayudar a combatir la desinformación. Este proyecto tiene dos partes
 ## Entorno de desarrollo
 
 ```bash
-git clone https://github.com/TU-USUARIO/bulonator.git
+git clone https://github.com/bbotella/bulonator.git
 cd bulonator
 python3 -m unittest discover -s tests -v       # núcleo, metodología y estructura (sin red)
 python3.11 -m venv .venv && .venv/bin/pip install -e ".[motor,evals]"

@@ -23,7 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 LINK = re.compile(r"<(https?://[^>\s]+)>|\]\((https?://[^)\s]+)\)")
-SKIP = ("TU-USUARIO", "ejemplo.", "example.")
+# El propio repositorio no se puede comprobar antes de publicarlo
+SKIP = ("github.com/bbotella/bulonator", "ejemplo.", "example.")
 
 
 def check(url: str) -> tuple[str, str, str]:
