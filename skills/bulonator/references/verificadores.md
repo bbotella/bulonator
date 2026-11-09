@@ -2,13 +2,16 @@
 
 ## Buscar verificaciones previas
 
-1. `python3 bulonator.py factcheck "<palabras clave>"`. Con `GOOGLE_FACTCHECK_API_KEY` definida consulta la base ClaimReview de Google.
-2. `WebSearch` con `allowed_domains` y las palabras clave del bulo, en español y también traducidas, porque los bulos cruzan fronteras:
+**[VER-1]** Busca siempre verificaciones previas, en español y también traducidas, porque los bulos cruzan fronteras:
+
+1. `factcheck` con las palabras clave del bulo. Consulta la base ClaimReview de Google cuando el entorno tiene configurada su clave.
+2. `buscar` con las palabras clave, restringido a los dominios de los verificadores:
    - España: `["maldita.es", "newtral.es", "verifica.efe.com", "verificat.cat", "factual.afp.com", "rtve.es"]`
    - Internacional: `["factcheck.afp.com", "reuters.com", "apnews.com", "fullfact.org", "snopes.com", "politifact.com", "leadstories.com", "correctiv.org", "facta.news", "lemonde.fr", "poligrafo.sapo.pt", "observador.pt"]`
    - América Latina: `["chequeado.com", "colombiacheck.com", "animalpolitico.com", "verificado.com.mx", "boliviaverifica.bo", "ecuadorchequea.com", "fastcheck.cl", "ojo-publico.com", "aosfatos.org", "lupa.uol.com.br", "cotejo.info"]`
    - Desinformación de Estado: `["euvsdisinfo.eu"]` (base de datos del Servicio Europeo de Acción Exterior sobre desinformación prorrusa)
-3. Un desmentido previo se **cita como fuente de tipo `verificador`**, pero no sustituye a la verificación propia con fuentes primarias. Maldita.es también cita siempre los desmentidos de terceros.
+
+**[VER-2]** Un desmentido previo se **cita como fuente de tipo `verificador`**, pero no sustituye a la verificación propia con fuentes primarias. Maldita.es también cita siempre los desmentidos de terceros.
 
 ## Verificadores de referencia
 
@@ -49,7 +52,7 @@ Directorios para comprobar si un verificador está acreditado:
 
 ## Webs satíricas frecuentes
 
-Si el contenido procede de una de estas webs, se trata de sátira. Comprueba después si circula como real (ver `calificaciones.md`).
+**[VER-3]** Si el contenido procede de una de estas webs, o la propia web tiene un aviso de sátira (en "Quiénes somos" o en el pie de página), se trata de sátira. Comprueba después si circula como real y califícalo según [CAL-14].
 
 | Web | País |
 |---|---|
@@ -64,11 +67,9 @@ Si el contenido procede de una de estas webs, se trata de sátira. Comprueba des
 | Der Postillon <https://www.der-postillon.com> | Alemania |
 | Waterford Whispers News <https://waterfordwhispersnews.com> | Irlanda |
 
-Busca también en la propia web su aviso de sátira, en su página "Quiénes somos" o en el pie de página.
-
 ## Patrones de bulo frecuentes en España
 
-Úsalos para orientar las búsquedas, no como prueba.
+**[VER-4]** Estos patrones sirven para orientar las búsquedas, nunca como prueba.
 
 - **Falsas ayudas y pagas** ("paguita para inmigrantes", "el Gobierno regala…"): búscalas en el BOE y el boletín autonómico y revisa la normativa real.
 - **Capturas falsas de titulares** de medios reales: comprueba la web del medio y la Wayback Machine.

@@ -13,20 +13,21 @@ allowed-tools: Bash(python3:*), Bash(curl:*), Read, Write, Edit, Glob, Grep, Web
 - REFS: `${CLAUDE_SKILL_DIR}/../bulonator/references/`
 - Plantillas: `${CLAUDE_SKILL_DIR}/../bulonator/templates/`
 
-Se aplican los principios innegociables de `/bulonator`: nada sin evidencia abierta en este caso, primero las fuentes primarias, la falta de pruebas no equivale a falsedad y las opiniones no se verifican. Lee `REFS/calificaciones.md` y `REFS/fuentes-oficiales.md`.
+Sigue `REFS/flujo.md` con las particularidades de abajo. Te obligan los principios de `REFS/metodologia.md` (apartado 1). Lee `REFS/flujo.md`, `REFS/calificaciones.md` y `REFS/fuentes-oficiales.md`.
 
-## Pasos
+Los subagentes se llaman `bulonator-verificador`, `bulonator-origen` y `bulonator-auditor` (con instalación como plugin, `bulonator:bulonator-…`). Pasa en cada prompt CASO y las rutas de SCRIPT y REFS. Si no están disponibles, usa agentes de propósito general indicándoles que sigan las instrucciones de `${CLAUDE_SKILL_DIR}/../../agents/bulonator-verificador.md` (o `~/.claude/agents/`).
 
-1. Si la afirmación está vacía o es una opinión pura, pide una afirmación comprobable o explica que no es verificable y señala qué datos la sostienen.
-2. **Caso:** `python3 SCRIPT caso "<afirmación>"`. Toma la ruta del campo `caso` y guarda la afirmación literal en `CASO/02-afirmaciones.md`, formulada de forma comprobable (quién, qué, cuándo, dónde, cuánto, con qué definición) y con "quién tendría el dato".
-3. Lanza **`bulonator-verificador`** con la afirmación (`A1`), CASO, la salida `evidencias/verificador-A1.md`, el prefijo `E-A1-` y las rutas de SCRIPT y REFS. Si la afirmación tiene varias partes independientes, lanza uno por parte en el mismo mensaje (como máximo 3). Si es una cita atribuida o un posible bulo ya conocido, lanza también **`bulonator-origen`** para buscar desmentidos previos y el origen.
-4. Delibera con `REFS/calificaciones.md`. Escribe `CASO/informe.md` (versión breve de `templates/informe.md`) y `CASO/publicacion.md` (publicación breve, hilo corto de 3 o 4 publicaciones y respuesta para WhatsApp). Mide las publicaciones con `python3 SCRIPT contar --bloques CASO/publicacion.md`.
-5. Lanza **`bulonator-auditor`** (ronda 1). Aplica los cambios y haz una segunda ronda si hay un VETO o si cambian la calificación o las cifras.
-6. Entrega en el chat:
+## Particularidades
+
+1. **Entrada:** si la afirmación está vacía o es una opinión pura, pide una afirmación comprobable, o explica que no es verificable y señala qué datos la sostienen [CAL-6]. La única opción es `--idioma`.
+2. **Sin captura:** ejecuta `python3 SCRIPT caso "<afirmación>"` y toma la ruta del campo `caso`.
+3. **Desglose mínimo:** en `CASO/02-afirmaciones.md`, la afirmación literal como `A1`, formulada de forma comprobable [MET-15] y con quién tendría el dato [MET-16].
+4. **Investigación:** lanza `bulonator-verificador` con `A1`, la salida `CASO/evidencias/verificador-A1.md` y el prefijo `E-A1-`. Si la afirmación tiene varias partes independientes, lanza uno por parte en el mismo mensaje (como máximo 3). Si es una cita atribuida o un posible bulo ya conocido, lanza también `bulonator-origen`, para los desmentidos previos y el origen.
+5. **Textos breves:** `CASO/informe.md` es una versión breve de `templates/informe.md`, y `CASO/publicacion.md` lleva solo la publicación breve, un hilo corto (con el mínimo de publicaciones que fija `REFS/reglas.json`) y la respuesta para WhatsApp. Después ejecuta `python3 SCRIPT contar --bloques CASO/publicacion.md` y `python3 SCRIPT validar CASO`, y corrige todos los errores antes de la auditoría.
+6. **Auditoría y cierre:** lanza `bulonator-auditor` (ronda 1) con la salida de `validar` y sigue las rondas de `REFS/flujo.md`. Después de la última, ejecuta `python3 SCRIPT resultado CASO --calificacion "<CAL>" [--subtipo <s>] --confianza <C> --dictamen <D> --rondas <N> [--cierre] [--idioma es]` y `python3 SCRIPT validar CASO`, que tiene que dar `ok: true` antes de entregar.
+7. **Entrega en el chat:**
    - la calificación con su emoji y la confianza;
    - el dato correcto con su fuente oficial enlazada;
    - los matices: definición, periodo, comparación;
    - el texto para compartir;
    - las limitaciones.
-
-Si no están disponibles los agentes `bulonator-*`, usa agentes de propósito general indicándoles que sigan las instrucciones de `${CLAUDE_SKILL_DIR}/../../agents/bulonator-verificador.md` (o `~/.claude/agents/`).

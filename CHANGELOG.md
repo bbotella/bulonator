@@ -2,6 +2,27 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). El proyecto sigue [SemVer](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-11-09
+
+### Añadido
+
+- **Paquete de Python `bulonator`** (`pyproject.toml`, orden `bulonator`):
+  - `bulonator.nucleo`, sin dependencias y con Python 3.9 o superior: las herramientas del antiguo script, ahora como funciones de librería;
+  - `bulonator.motor` (extra `[motor]`, Python 3.11 o superior): el análisis completo con Pydantic AI y cualquier modelo (Ollama, OpenAI, Gemini, Anthropic…). Admite un modelo por papel, `bulonator analizar`, `analizar()` y `analizar_sync()`, eventos de progreso, presupuesto de tokens y herramientas reutilizables. Ver `docs/motor.md`.
+- `leer`: abre una fuente, guarda su texto en `evidencias/paginas/` y la registra. `buscar`: búsqueda web con SearXNG, Brave o Tavily, anotada en `evidencias/busquedas.jsonl`.
+- `validar`: comprobaciones mecánicas del caso. Cada URL citada se abrió, cada cita literal está en la fuente guardada, `[n]` ↔ `E-…`, la calificación es coherente, la confianza está permitida y los textos caben en X.
+- `resultado`: `resultado.json`, el resumen del caso para otros programas, igual en Claude Code y en el motor.
+- `--caso` en `boe`, `ine`, `wayback`, `dominio` y `factcheck`, para registrar lo que devuelven y poder citarlo.
+- `references/reglas.json` (cifras y listas cerradas), `references/flujo.md` (fases comunes) y `references/herramientas-claude.md` (capacidades en Claude Code).
+- `install.sh --motor` y `--solo-motor`.
+
+### Cambiado
+
+- **Metodología sin repeticiones.** Cada regla tiene un identificador (`[EV-4]`, `[CAL-9]`…) y se define en un solo archivo. Los agentes y las skills la citan.
+- **Agentes neutros.** Sus secciones compartidas nombran capacidades, no herramientas de Claude Code.
+- `skills/bulonator/scripts/bulonator.py` es ahora un lanzador del paquete, con los mismos subcomandos. `install.sh` copia el núcleo junto a él: la instalación y el uso en Claude Code no cambian.
+- Se bloquean por defecto las URL de la red local y de la propia máquina, incluidas las redirecciones, y los esquemas que no son http(s).
+
 ## [1.0.0] - 2026-11-06
 
 ### Añadido

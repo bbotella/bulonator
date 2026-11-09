@@ -1,26 +1,29 @@
-"""Pruebas unitarias de skills/bulonator/scripts/bulonator.py (sin red).
+"""Pruebas unitarias del núcleo de Bulonator (sin red).
 
 Ejecuta: python3 -m unittest discover -s tests -v
 """
 from __future__ import annotations
 
-import importlib.util
 import io
 import json
 import struct
 import sys
 import tempfile
+import types
 import unittest
 import zlib
 from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = ROOT / "skills" / "bulonator" / "scripts" / "bulonator.py"
-spec = importlib.util.spec_from_file_location("bulonator", SCRIPT)
-bt = importlib.util.module_from_spec(spec)
-sys.modules["bulonator"] = bt
-spec.loader.exec_module(bt)
+sys.path.insert(0, str(ROOT / "src"))
+
+from bulonator import cli  # noqa: E402
+from bulonator.nucleo import captura, extraccion, multimedia, red, texto, util  # noqa: E402
+
+# Espacio de nombres con las funciones que antes vivían en un solo script
+bt = types.SimpleNamespace(**{k: getattr(m, k) for m in (util, red, extraccion, captura, multimedia, texto)
+                              for k in dir(m) if not k.startswith("__")}, main=cli.main)
 
 
 def run_cli(*argv) -> dict:

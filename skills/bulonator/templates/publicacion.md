@@ -1,7 +1,7 @@
 # Textos para compartir: {{ID_CASO}}
 
 > Calificación: {{EMOJI}} {{CALIFICACIÓN}} · Confianza: {{…}} · Verificado el {{DD/MM/AAAA}}
-> Cada publicación va en su propio bloque `text` para poder copiarla y medirla (`python3 <SCRIPT> contar --bloques publicacion.md`).
+> Cada publicación va en su propio bloque `text` para poder copiarla y medirla.
 > Cada dato de estos textos procede de `informe.md`, donde tiene su fuente [n] y su evidencia E-….
 
 ## 1. Publicación breve (X, Bluesky, Threads, Mastodon): 280 como máximo, ponderado para X

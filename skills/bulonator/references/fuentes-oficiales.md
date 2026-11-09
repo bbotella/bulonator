@@ -1,13 +1,12 @@
 # Catálogo de fuentes oficiales y primarias
 
-Pregunta guía: **¿quién tendría este dato si fuera cierto?** Ve a esa fuente antes que a la prensa.
+Pregunta guía: **¿quién tendría este dato si fuera cierto?** [MET-16]
 
 Cómo buscar dentro de un dominio oficial:
 
-- `WebSearch` con `allowed_domains` (por ejemplo `["boe.es"]` o `["ine.es"]`) y términos literales.
-- `WebFetch` para abrir el documento. Pide al modelo "la cita literal exacta" del pasaje relevante.
-- Para cifras y frases críticas, confírmalas sobre el documento original: `curl -sL <url> | grep -i "<fragmento>"`. Si es un PDF, descárgalo a `evidencias/docs/` y ábrelo con `Read`.
-- Las herramientas de `scripts/bulonator.py` (`boe`, `ine`) y las API públicas que aparecen abajo dan datos estructurados sin intermediarios.
+- `buscar` restringido al dominio (por ejemplo `boe.es` o `ine.es`) y con términos literales.
+- `leer` para abrir el documento y guardar su texto. Las cifras y frases críticas se confirman sobre ese texto [EV-6]. Los PDF se descargan a `evidencias/docs/`.
+- Las herramientas `boe`, `boe_sumario`, `ine_operaciones`, `ine_tablas` e `ine_datos`, y las API públicas que aparecen abajo, dan datos estructurados sin intermediarios. Si citas un dato de una API, registra la respuesta con `leer` [EV-9].
 
 ---
 
@@ -16,8 +15,8 @@ Cómo buscar dentro de un dominio oficial:
 | Fuente | Qué contiene | Acceso |
 |---|---|---|
 | **BOE**, Boletín Oficial del Estado | Leyes, reales decretos, órdenes, ayudas, nombramientos, convocatorias, BORME | <https://www.boe.es> · API abierta <https://www.boe.es/datosabiertos/> |
-| BOE, legislación consolidada | Texto vigente de cada norma, con su historial de versiones | `python3 bulonator.py boe "<palabras del título>" [--desde AAAAMMDD]` |
-| BOE, sumario diario | Todo lo publicado en un día | `python3 bulonator.py boe --sumario AAAAMMDD [palabras]` |
+| BOE, legislación consolidada | Texto vigente de cada norma, con su historial de versiones | `boe` con palabras del título y, si hace falta, un intervalo de fechas |
+| BOE, sumario diario | Todo lo publicado en un día | `boe_sumario` con la fecha y, si hace falta, palabras |
 | Congreso de los Diputados | Iniciativas (proyectos y proposiciones de ley), diarios de sesiones, votaciones | <https://www.congreso.es> · datos abiertos <https://www.congreso.es/es/datos-abiertos> |
 | Senado | Iniciativas, diarios de sesiones, enmiendas | <https://www.senado.es> |
 | La Moncloa, referencias del Consejo de Ministros | Lo que aprueba el Gobierno cada semana. Ojo: un anteproyecto no es una ley | <https://www.lamoncloa.gob.es/consejodeministros/referencias/Paginas/index.aspx> |
@@ -31,7 +30,7 @@ Cómo buscar dentro de un dominio oficial:
 
 ### Boletines autonómicos
 
-Si la medida es autonómica, búscala en su boletín; si es municipal, en el boletín provincial (BOP).
+**[FUE-1]** Busca cada norma en el boletín de su ámbito: la estatal, en el BOE; la autonómica, en el boletín de su comunidad; la municipal, en el boletín provincial (BOP).
 
 | Comunidad | Boletín | Web |
 |---|---|---|
@@ -50,7 +49,7 @@ Si la medida es autonómica, búscala en su boletín; si es municipal, en el bol
 | Comunidad de Madrid | BOCM | <https://www.bocm.es> |
 | Región de Murcia | BORM | <https://www.borm.es> |
 | Navarra | BON | <https://bon.navarra.es> |
-| País Vasco | BOPV/EHAA | <https://www.euskadi.eus> (sección BOPV; para buscar, `WebSearch` con `allowed_domains: ["euskadi.eus"]` y "bopv") |
+| País Vasco | BOPV/EHAA | <https://www.euskadi.eus> (sección BOPV; para buscar, `buscar` en el dominio `euskadi.eus` con "bopv") |
 | La Rioja | BOR | <https://web.larioja.org/bor-portada> |
 | Ceuta | BOCCE | <https://www.ceuta.es> |
 | Melilla | BOME | <https://bomemelilla.es> |
@@ -59,7 +58,7 @@ Si la medida es autonómica, búscala en su boletín; si es municipal, en el bol
 
 | Fuente | Qué contiene | Acceso |
 |---|---|---|
-| **INE** | Población y Padrón, EPA (paro), IPC, migraciones, PIB, salarios, defunciones, vivienda | <https://www.ine.es> · API Tempus `https://servicios.ine.es/wstempus/js/ES/…` · `python3 bulonator.py ine "<tema>"`, luego `--tablas <COD>` y `--datos <ID>` |
+| **INE** | Población y Padrón, EPA (paro), IPC, migraciones, PIB, salarios, defunciones, vivienda | <https://www.ine.es> · API Tempus `https://servicios.ine.es/wstempus/js/ES/…` · `ine_operaciones` con el tema, luego `ine_tablas` e `ine_datos` |
 | SEPE | Paro registrado y contratos. No es lo mismo que la tasa de paro de la EPA | <https://www.sepe.es/HomeSepe/que-es-el-sepe/estadisticas.html> |
 | Seguridad Social | Afiliación, pensiones, prestaciones | <https://www.seg-social.es> |
 | Ministerio del Interior | Balance de criminalidad, informes de inmigración irregular, seguridad vial | <https://www.interior.gob.es/opencms/es/prensa/balances-e-informes/> · portal estadístico <https://estadisticasdecriminalidad.ses.mir.es> |
@@ -154,9 +153,11 @@ Si la medida es autonómica, búscala en su boletín; si es municipal, en el bol
 | Cochrane Library <https://www.cochranelibrary.com> | Revisiones sistemáticas |
 | Retraction Watch Database <https://retractiondatabase.org> | Comprobar si un estudio ha sido retractado |
 
-Advertencias con la ciencia: un estudio aislado no es consenso; los preprints no están revisados por pares; los estudios en animales o in vitro no prueban efectos en humanos.
+**[FUE-2]** Advertencias con la ciencia: un estudio aislado no es consenso; los preprints no están revisados por pares; los estudios en animales o in vitro no prueban efectos en humanos.
 
 ## Trampas habituales con los datos
+
+**[FUE-3]** Antes de concluir, comprueba la definición exacta, el ámbito (estatal o autonómico), el periodo, las unidades, si son valores absolutos o relativos, la serie histórica (¿es un pico puntual?), que la comparación sea homogénea (mismo periodo, misma definición, en tasa o en absoluto) y la vigencia de la norma (derogada, en tramitación, anteproyecto). No confundas correlación con causalidad. Las trampas más habituales:
 
 - **Paro:** paro registrado (SEPE, mensual) frente a tasa de paro (INE, EPA, trimestral). Son medidas distintas.
 - **Población extranjera** frente a población **nacida en el extranjero**: el INE publica las dos.

@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "descripcion": "Cifras y listas cerradas de la metodología de Bulonator. Es la única fuente de estos valores: los usan el script (contar, validar, resultado), el motor y los agentes. Los textos de references/ explican el porqué y remiten aquí.",
+  "calificaciones": {
+    "FALSO": {
+      "emoji": "❌",
+      "etiqueta": "❌ FALSO",
+      "confianzas": [
+        "ALTA",
+        "MEDIA"
+      ],
+      "subtipos": [
+        "inventado",
+        "manipulado",
+        "descontextualizado",
+        "fuente-no-lo-dice",
+        "contradice-datos",
+        "suplantación",
+        "sátira-como-real",
+        "timo"
+      ]
+    },
+    "ALERTA": {
+      "emoji": "⚠️",
+      "etiqueta": "⚠️ ALERTA",
+      "confianzas": [
+        "ALTA",
+        "MEDIA",
+        "BAJA"
+      ],
+      "subtipos": []
+    },
+    "CONTEXTO": {
+      "emoji": "🔍",
+      "etiqueta": "🔍 CONTEXTO",
+      "confianzas": [
+        "ALTA",
+        "MEDIA",
+        "BAJA"
+      ],
+      "subtipos": []
+    },
+    "VERDADERO": {
+      "emoji": "✅",
+      "etiqueta": "✅ VERDADERO",
+      "confianzas": [
+        "ALTA",
+        "MEDIA"
+      ],
+      "subtipos": []
+    },
+    "NO VERIFICABLE": {
+      "emoji": "💬",
+      "etiqueta": "💬 OPINIÓN",
+      "confianzas": [
+        "ALTA",
+        "MEDIA",
+        "BAJA"
+      ],
+      "subtipos": []
+    },
+    "SIN VEREDICTO": {
+      "emoji": "⏸️",
+      "etiqueta": "⏸️ SIN VEREDICTO",
+      "confianzas": [
+        "ALTA",
+        "MEDIA",
+        "BAJA"
+      ],
+      "subtipos": []
+    }
+  },
+  "confianzas": [
+    "ALTA",
+    "MEDIA",
+    "BAJA"
+  ],
+  "veredictos_multimedia": [
+    "auténtico-en-su-contexto",
+    "descontextualizado",
+    "manipulado",
+    "generado-con-IA",
+    "no-determinado"
+  ],
+  "tipos_fuente": [
+    "primaria-oficial",
+    "primaria-documental",
+    "experta",
+    "verificador",
+    "medio",
+    "declaración-de-parte",
+    "herramienta",
+    "archivo"
+  ],
+  "falso": {
+    "fuentes_independientes_min": 2
+  },
+  "evidencias": {
+    "cita_max_palabras": 50,
+    "cita_min_palabras_comprobables": 3
+  },
+  "auditoria": {
+    "dictamenes": [
+      "PALANTE",
+      "CAMBIOS",
+      "VETO"
+    ],
+    "rondas_max": 2
+  },
+  "plataformas": {
+    "x": {
+      "limite": 280,
+      "cuenta": "ponderada",
+      "enlace": 23,
+      "emoji": 2
+    },
+    "bluesky": {
+      "limite": 300,
+      "cuenta": "caracteres"
+    },
+    "threads": {
+      "limite": 500,
+      "cuenta": "caracteres"
+    },
+    "mastodon": {
+      "limite": 500,
+      "cuenta": "caracteres",
+      "enlace": 23
+    }
+  },
+  "publicaciones": {
+    "breve": {
+      "titulo": "Publicación breve",
+      "plataformas": [
+        "x",
+        "bluesky",
+        "threads",
+        "mastodon"
+      ]
+    },
+    "hilo_x": {
+      "titulo": "Hilo para X",
+      "plataformas": [
+        "x"
+      ],
+      "min": 4,
+      "max": 8,
+      "opcional": true
+    },
+    "largo": {
+      "titulo": "Texto largo",
+      "plataformas": [],
+      "opcional": true
+    },
+    "mensajeria": {
+      "titulo": "Respuesta para grupos de WhatsApp o Telegram",
+      "plataformas": []
+    },
+    "texto_alternativo": {
+      "titulo": "Texto alternativo",
+      "plataformas": [],
+      "opcional": true
+    }
+  },
+  "modos": {
+    "rapido": {
+      "verificadores": 2,
+      "multimedia": 1,
+      "origen": 1,
+      "auditores": 1,
+      "segunda_ronda_investigacion": false
+    },
+    "normal": {
+      "verificadores": 4,
+      "multimedia": 3,
+      "origen": 1,
+      "auditores": 1,
+      "segunda_ronda_investigacion": false
+    },
+    "profundo": {
+      "verificadores": 6,
+      "multimedia": null,
+      "origen": 1,
+      "auditores": 2,
+      "segunda_ronda_investigacion": true
+    }
+  }
+}

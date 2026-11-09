@@ -31,9 +31,18 @@ Todo el material del caso se guarda **solo en local**, en `./bulonator-casos/`, 
 | `www.boe.es`, `servicios.ine.es` y otras API oficiales | Los términos de búsqueda | Verificación |
 | El buscador y el lector web de Claude Code (WebSearch y WebFetch) | Las consultas y las URL | Verificación |
 | SerpAPI y Google Fact Check Tools | La URL de la imagen y las palabras clave | Solo si has configurado sus claves |
-| Anthropic | El contenido del caso, como en cualquier conversación de Claude Code | Siempre |
+| Anthropic | El contenido del caso, como en cualquier conversación de Claude Code | Siempre, con el plugin |
+| El proveedor de cada modelo del motor (OpenAI, Google, Anthropic…) | El contenido del caso que recibe cada papel | Con el motor y modelos en la nube. Con Ollama en local, el contenido no sale de tu equipo salvo para las consultas de las fuentes |
+| Tu buscador (SearXNG, Brave o Tavily) | Las consultas | Con `buscar` |
 
 **No uses Bulonator con enlaces privados, documentos confidenciales ni datos personales de terceros** que no deban salir de tu equipo. Con `--archivar`, la copia en la Wayback Machine es **pública**.
+
+## El motor con otros modelos
+
+- **Los modelos locales o pequeños se equivocan más.** La validación mecánica impide citar URL que no se han abierto o citas que no están en la fuente, pero no evita que se lea mal una fuente real. Usa un auditor de otro proveedor y revisa los casos.
+- **No hay navegador.** Las webs que necesitan JavaScript o iniciar sesión, y la búsqueda inversa sin SerpAPI, quedan como laguna.
+- **Un VETO no lanza una investigación nueva.** El redactor corrige con las evidencias que hay. La única ronda de investigación adicional es la dirigida sobre la afirmación central.
+- **Publicar es decisión de quien usa la librería.** `caso.aprobado` es un requisito mínimo, no un permiso para publicar sin revisión humana.
 
 ## Uso responsable
 

@@ -4,6 +4,14 @@ bulonator-casos/
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+# Copia del núcleo que deja install.sh junto al lanzador (nunca en el repositorio)
+skills/bulonator/scripts/_vendor/
 
 # Claude Code (configuración local de cada persona)
 .claude/settings.local.json

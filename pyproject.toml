@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bulonator"
+dynamic = ["version"]
+description = "Verificación de bulos con la metodología del periodismo de verificación (Maldita.es, IFCN): núcleo sin dependencias y motor multimodelo con Pydantic AI."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "Bernardo Botella" }]
+keywords = ["fact-checking", "verificación", "bulos", "desinformación", "pydantic-ai", "llm", "ollama"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Natural Language :: Spanish",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Text Processing",
+]
+# El núcleo solo usa la biblioteca estándar: el plugin de Claude Code funciona sin instalar nada.
+dependencies = []
+
+[project.optional-dependencies]
+# Motor de análisis con modelos de lenguaje. Necesita Python 3.11 o superior (lo exige pydantic-ai).
+# El extra "openai" cubre también Ollama y cualquier servidor compatible con la API de OpenAI.
+motor = [
+    "pydantic-ai-slim[openai,google,anthropic]>=2.66,<3",
+    "pypdf>=5",
+]
+pdf = ["pypdf>=5"]
+evals = ["bulonator[motor]", "pydantic-evals>=2.66,<3"]
+
+[project.scripts]
+bulonator = "bulonator.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/TU-USUARIO/bulonator"
+Documentation = "https://github.com/TU-USUARIO/bulonator/blob/main/docs/motor.md"
+Issues = "https://github.com/TU-USUARIO/bulonator/issues"
+
+[tool.hatch.version]
+path = "src/bulonator/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bulonator"]
+
+# La metodología tiene una sola copia (la del plugin); la rueda la incluye para el motor.
+[tool.hatch.build.targets.wheel.force-include]
+"skills/bulonator/references" = "bulonator/_datos/references"
+"skills/bulonator/templates" = "bulonator/_datos/templates"
+"agents" = "bulonator/_datos/agents"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "skills", "agents", "tests", "docs", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"

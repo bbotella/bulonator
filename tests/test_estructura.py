@@ -45,10 +45,10 @@ class TestManifiestos(unittest.TestCase):
         self.assertEqual(entry["version"], plugin["version"], "la versión del marketplace no coincide con plugin.json")
         self.assertEqual(entry["source"], "./")
 
-    def test_version_del_script(self):
+    def test_version_del_paquete(self):
         plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        script = (ROOT / "skills" / "bulonator" / "scripts" / "bulonator.py").read_text(encoding="utf-8")
-        self.assertIn(f'VERSION = "{plugin["version"]}"', script)
+        init = (ROOT / "src" / "bulonator" / "__init__.py").read_text(encoding="utf-8")
+        self.assertIn(f'__version__ = "{plugin["version"]}"', init)
 
 
 class TestSkills(unittest.TestCase):

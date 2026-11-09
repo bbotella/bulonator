@@ -22,7 +22,7 @@
 {{Explicación con datos y citas breves, cada una con [n]. Nombra la fuente en el texto: "según el BOE…", "la tabla 3 de la EPA del INE…".}}
 <!-- Evidencias: E-A1-01, E-A1-02 -->
 
-### {{M1}}: {{imagen/vídeo}} → {{auténtico-en-su-contexto / descontextualizado / manipulado / generado-con-IA / no-determinado}}
+### {{M1}}: {{imagen/vídeo}} → {{estado del elemento [MM-1]}}
 
 {{Primera aparición, lugar, fecha y técnica usada, con [n].}}
 <!-- Evidencias: E-M1-… -->
@@ -34,7 +34,7 @@
 
 ## Por qué lo calificamos como {{CALIFICACIÓN}}
 
-{{Aplica las reglas de calificaciones.md: qué afirmación es la central, qué fuentes independientes lo sostienen y por qué no es la categoría vecina (por ejemplo, por qué FALSO y no ALERTA).}}
+{{Aplica [CAL-8] y [CAL-15]: qué afirmación es la central, qué fuentes independientes lo sostienen y por qué no es la categoría vecina (por ejemplo, por qué FALSO y no ALERTA).}}
 
 ## Lo que no hemos podido comprobar
 
