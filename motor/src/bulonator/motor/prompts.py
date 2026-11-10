@@ -29,6 +29,18 @@ _SECCIONES_FLUJO = {"desglose": ("Desglose",), "redactor": ("Deliberación y red
 _PLANTILLAS = {"desglose": ("afirmaciones.md",), "redactor": ("informe.md", "publicacion.md")}
 _NO_INCLUIR = {"herramientas-claude.md"}
 
+_SIN_PRUEBAS = ("- Si no encuentras ninguna fuente que lo confirme o lo desmienta, no fabriques evidencias ni URL: "
+                "entrega la salida con la lista de evidencias vacía y la calificación que corresponde a la ausencia de "
+                "pruebas según calificaciones.md (normalmente ALERTA). Las búsquedas que haces con las herramientas se "
+                "registran solas.\n")
+
+_ENTREGA = {
+    "herramienta": "Cuando termines, entrega el resultado llamando a la herramienta `final_result` con todos sus "
+                   "campos. No lo escribas como texto.",
+    "nativa": "Cuando termines, responde solo con el objeto JSON de la salida, sin texto alrededor.",
+    "texto": "Cuando termines, responde solo con el objeto JSON de la salida, sin texto alrededor.",
+}
+
 _FUNCION = {
     "captura": "Haces la ficha del contenido ya capturado (el motor ha ejecutado la captura): qué es, quién lo "
                "publica, qué dice literalmente y qué multimedia lleva, con sus evidencias E-C-….",
@@ -65,8 +77,8 @@ def texto_del_papel(papel: str) -> str:
     return texto_compartido_de_agente(f"bulonator-{papel}")
 
 
-def _hoja_de_herramientas(papel: str, config: Config, busqueda_nativa: bool) -> str:
-    nombres = nombres_para(papel, config)
+def _hoja_de_herramientas(papel: str, config: Config, busqueda_nativa: bool, con_herramientas: bool = True) -> str:
+    nombres = nombres_para(papel, config) if con_herramientas else []
     if not nombres and not busqueda_nativa:
         return "En este papel no tienes herramientas: trabajas con lo que se te da."
     lineas = [f"- `{n}`: {(TODAS[n].__doc__ or '').strip().splitlines()[0]}" for n in nombres]
@@ -74,13 +86,16 @@ def _hoja_de_herramientas(papel: str, config: Config, busqueda_nativa: bool) -> 
         lineas.append("- `buscar`: usa tu herramienta de búsqueda web nativa. Los extractos no son evidencia.")
     elif "buscar" in POR_PAPEL[papel] and "buscar" not in nombres:
         lineas.append("- `buscar`: no hay buscador configurado; anota en las lagunas las búsquedas que no has podido hacer.")
-    if papel in ("verificador", "multimedia", "origen", "captura"):
+    if papel in ("verificador", "multimedia", "origen", "captura") and con_herramientas:
         lineas.append("- `navegador`: no está disponible en el motor; si una fuente lo necesita, anótalo como laguna.")
     return "\n".join(lineas)
 
 
-def instrucciones(papel: str, config: Config, busqueda_nativa: bool = False) -> str:
-    """Instrucciones completas de un papel: contrato del motor, metodología, herramientas y referencias."""
+def instrucciones(papel: str, config: Config, busqueda_nativa: bool = False, con_herramientas: bool = True) -> str:
+    """Instrucciones completas de un papel: contrato del motor, metodología, herramientas y referencias.
+
+    ``con_herramientas=False`` deja el papel sin herramientas (por ejemplo, la ficha de un texto pegado).
+    """
     m = metodologia()
     texto = texto_del_papel(papel)
     partes = [
@@ -93,8 +108,16 @@ def instrucciones(papel: str, config: Config, busqueda_nativa: bool = False) -> 
         "con los problemas para que la corrijas.\n"
         "- Las evidencias solo pueden citar páginas abiertas con `leer` (o registradas por otras herramientas), y su "
         "cita literal tiene que estar en el texto guardado: cópiala, no la reformules.\n"
+        "- No hagas preguntas ni pidas datos: nadie va a responderte. Si te falta algo, decláralo en las lagunas o "
+        "limitaciones y entrega la salida igualmente.\n"
+        "- Nunca escribas una URL de memoria: solo las que hayas abierto o que aparezcan en los datos del caso.\n"
+        f"- Tienes como máximo {config.max_peticiones} peticiones al modelo en este papel. No repitas con variaciones "
+        "mínimas búsquedas que ya no han dado resultado: unas pocas consultas negativas bien elegidas bastan para "
+        "declarar que algo no consta. Reserva las últimas peticiones para entregar la salida.\n"
+        + (_SIN_PRUEBAS if papel in ("verificador", "multimedia", "origen") else "") +
+        f"- {_ENTREGA[config.salida]}\n"
         f"- Fecha de hoy: {dt.date.today().isoformat()}. Idioma de los textos para redes: {config.idioma}.",
-        "## Herramientas\n\n" + _hoja_de_herramientas(papel, config, busqueda_nativa),
+        "## Herramientas\n\n" + _hoja_de_herramientas(papel, config, busqueda_nativa, con_herramientas),
         "# Metodología del papel\n\n" + texto,
     ]
     for nombre in _PLANTILLAS.get(papel, ()):

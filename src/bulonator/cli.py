@@ -287,6 +287,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--archivar", action="store_true", help="solicitar copias nuevas en la Wayback Machine")
     s.add_argument("--casos", help="carpeta donde se crean los casos (por defecto ./bulonator-casos)")
     s.add_argument("--buscador", choices=["searxng", "brave", "tavily", "nativo"])
+    s.add_argument("--concurrencia", type=int, help="papeles trabajando a la vez (con Ollama local, 1)")
+    s.add_argument("--razonamiento", choices=["minimo", "bajo", "medio", "alto"],
+                   help="cuánto razonan los modelos que razonan (prueba «bajo» con gpt-oss en local)")
+    s.add_argument("--salida", choices=["herramienta", "nativa", "texto"],
+                   help="cómo entregan los modelos su salida (prueba «nativa» con modelos locales pequeños)")
     s.add_argument("--silencioso", action="store_true", help="no mostrar el progreso por la salida de errores")
     s.set_defaults(func=cmd_analizar)
     return p

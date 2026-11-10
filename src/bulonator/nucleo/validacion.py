@@ -20,7 +20,8 @@ import unicodedata
 from pathlib import Path
 
 from .caso import RegistroPaginas, busquedas, normalizar_url
-from .documentos import (ID_EVIDENCIA_RE, URL_RE, cabecera_del_informe, calificacion_en, fuentes_del_informe,
+from .documentos import (ID_EVIDENCIA_RE, URL_RE, apartados_del_informe, cabecera_del_informe, calificacion_en,
+                         fuentes_del_informe,
                          id_valido, leer_evidencias, publicaciones, sin_comentarios)
 from .reglas import calificaciones, plataformas, reglas
 from .resultado import comprobar_resultado
@@ -28,6 +29,8 @@ from .texto import longitud
 
 _CAMPOS_OBLIGATORIOS = ("Fuente", "URL", "Tipo", "Cita literal")
 _SIN_URL = {"herramienta"}
+#: Calificaciones que afirman algo sobre los hechos y, por tanto, necesitan fuentes citadas
+_CON_FUENTES = {"FALSO", "VERDADERO", "CONTEXTO"}
 _CORTE = re.compile(r"\[\s*(?:\.\.\.|…)\s*\]|\(\s*(?:\.\.\.|…)\s*\)|…|\.\.\.")
 
 
@@ -100,20 +103,25 @@ def problemas_de_evidencia(ev, reg: RegistroPaginas, capturas: list) -> list:
     if not id_valido(ev.id):
         salida.append(("error", "id_invalido", f"identificador de evidencia no válido: {ev.id}"))
     tipo = ev.tipo
-    faltan = [c for c in _CAMPOS_OBLIGATORIOS if not ev.campo(c)
-              and not (tipo in _SIN_URL and c in {"URL", "Cita literal"})]
+    es_captura = ev.id.startswith("E-C-")
+    # Las herramientas no tienen URL ni cita; las evidencias de la captura de un texto o un archivo, tampoco URL
+    faltan = [c for c in _CAMPOS_OBLIGATORIOS if not ev.campo(c).strip("—- ")
+              and not (tipo in _SIN_URL and c in {"URL", "Cita literal"}) and not (es_captura and c == "URL")]
     if faltan:
         salida.append(("error", "campo_ausente", f"faltan campos: {', '.join(faltan)}"))
     if tipo and tipo not in tipos:
         salida.append(("error", "tipo_desconocido", f"tipo de fuente desconocido: {ev.campo('Tipo')}"))
     if tipo in _SIN_URL:
         return salida
-    es_captura = ev.id.startswith("E-C-")
     textos = reg.textos_de(ev.url) if ev.url else []
     if es_captura and not textos:
         textos = capturas
     if not ev.url and not es_captura:
         return salida + [("error", "url_ausente", "la evidencia no tiene una URL http(s)")]
+    if ev.copia and not reg.de(ev.copia):
+        salida.append(("error", "copia_no_registrada",
+                       f"la copia archivada {ev.copia} no está registrada en el caso: búscala con wayback --caso "
+                       "(o ábrela con leer) antes de citarla"))
     if not textos:
         return salida + [("error", "url_no_abierta",
                           f"{ev.url} no está registrada en el caso: ábrela con leer (o regístrala) antes de citarla")]
@@ -187,7 +195,13 @@ def _validar_informe(caso: Path, evidencias: list, inf: _Informe) -> dict:
     fuentes = fuentes_del_informe(texto)
     numeros = [f.n for f in fuentes]
     if not fuentes:
-        inf.error("sin_fuentes", "informe.md", "la sección Fuentes está vacía")
+        if cal in _CON_FUENTES:
+            inf.error("sin_fuentes", "informe.md",
+                      f"un {cal} necesita fuentes y la sección Fuentes está vacía: si no hay ninguna evidencia que "
+                      "citar, la calificación tiene que ser otra (ver la regla de la ausencia de pruebas en "
+                      "calificaciones.md); no te inventes fuentes")
+        else:
+            inf.aviso("sin_fuentes", "informe.md", "la sección Fuentes está vacía (no hay ninguna evidencia que citar)")
     if len(set(numeros)) != len(numeros):
         inf.error("fuente_duplicada", "informe.md", "hay números de fuente repetidos")
     if numeros and sorted(numeros) != list(range(1, len(numeros) + 1)):
@@ -202,6 +216,11 @@ def _validar_informe(caso: Path, evidencias: list, inf: _Informe) -> dict:
     for n in sorted({int(x) for x in re.findall(r"\[(\d+)\]", sin_comentarios(cuerpo))}):
         if n not in numeros:
             inf.error("referencia_inexistente", "informe.md", f"se cita [{n}] pero no está en Fuentes", f"[{n}]")
+    con_apartado = {a.id for a in apartados_del_informe(texto, "A")}
+    for aid in dict.fromkeys(re.findall(r"^\|\s*(A\d+)\s*\|", _leer(caso / "02-afirmaciones.md"), re.M)):
+        if aid not in con_apartado:
+            inf.aviso("afirmacion_sin_apartado", "informe.md",
+                      f"{aid} está en el desglose pero no tiene su apartado «### {aid}: … → …» en el informe", aid)
     for eid in sorted(set(ID_EVIDENCIA_RE.findall(texto)) - ids):
         inf.error("evidencia_inexistente", "informe.md", f"se menciona {eid} pero no existe en evidencias/", eid)
     return {"calificacion": cal, "numeros": numeros, "confianza": cab.get("confianza")}
@@ -217,8 +236,13 @@ def _validar_publicacion(caso: Path, cal, numeros: list, inf: _Informe) -> dict:
     pubs = publicaciones(texto)
     conf = reglas()["publicaciones"]
     for clave, c in conf.items():
+        valor = pubs.get(clave)
+        vacio = not valor or (isinstance(valor, list) and not any(x.strip() for x in valor)) or \
+            (isinstance(valor, str) and not valor.strip())
         if clave not in pubs and not c.get("opcional"):
             inf.error("falta_publicacion", "publicacion.md", f"falta el bloque «{c['titulo']}»", clave)
+        elif clave in pubs and vacio and not c.get("opcional"):
+            inf.error("publicacion_vacia", "publicacion.md", f"el bloque «{c['titulo']}» está vacío", clave)
     hilo = pubs.get("hilo_x", [])
     if hilo and not conf["hilo_x"]["min"] <= len(hilo) <= conf["hilo_x"]["max"]:
         inf.aviso("hilo_longitud", "publicacion.md",

@@ -10,7 +10,8 @@ from .util import HttpError
 
 
 def wayback_info(url: str) -> dict:
-    res: dict = {"enlace_archive_today": f"https://archive.ph/newest/{url}"}
+    # No es una copia: es el enlace para buscar si archive.today tiene alguna (se abre con un navegador)
+    res: dict = {"buscar_en_archive_today": f"https://archive.ph/newest/{url}"}
     try:
         j = http_json("https://archive.org/wayback/available?url=" + urllib.parse.quote(url, safe=""), timeout=25)
         closest = (j.get("archived_snapshots") or {}).get("closest")
@@ -46,14 +47,19 @@ def wayback(url: str, guardar: bool = False, caso=None) -> dict:
     if guardar:
         res["nueva_copia"] = wayback_save(url)
     if caso is not None:
-        from .caso import RegistroPaginas
-
-        reg = RegistroPaginas(caso)
-        for clave in ("primera_copia", "copia_mas_reciente", "nueva_copia"):
-            copia = res.get(clave) or {}
-            if copia.get("url"):
-                reg.registrar(copia["url"], texto_registro(url, res), "wayback", titulo=f"Copia de {url}")
+        registrar_copias(caso, url, res)
     return res
+
+
+def registrar_copias(caso, url: str, res: dict) -> None:
+    """Registra en el caso las copias archivadas encontradas, para poder citarlas como evidencia."""
+    from .caso import RegistroPaginas
+
+    reg = RegistroPaginas(caso)
+    for clave in ("primera_copia", "copia_mas_reciente", "nueva_copia"):
+        copia = res.get(clave) or {}
+        if copia.get("url"):
+            reg.registrar(copia["url"], texto_registro(url, res), "wayback", titulo=f"Copia de {url}")
 
 
 def texto_registro(url: str, res: dict) -> str:

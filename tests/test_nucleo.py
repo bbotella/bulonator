@@ -358,6 +358,56 @@ class TestValidarYResultado(unittest.TestCase):
         self.assertIn("id_duplicado", errores)
         self.assertIn("tipo_desconocido", errores)
 
+    def test_evidencia_de_captura_de_texto_sin_url(self):
+        """Si se ha capturado un texto, sus evidencias E-C no llevan URL y se comprueban contra ese texto."""
+        n.RegistroPaginas(self.caso).registrar("captura://captura", "Dicen que habrá una paga de 2.000 euros", "captura")
+        (self.caso / "evidencias" / "captura-texto.md").write_text(
+            "## Registro de evidencias\n\n### E-C-02\n- **Afirmación:** A1\n- **Fuente:** Texto aportado\n"
+            "- **URL:** —\n- **Tipo:** primaria-documental\n- **Cita literal:** «habrá una paga de 2.000 euros»\n",
+            encoding="utf-8")
+        res = n.validar(self.caso)
+        self.assertNotIn("E-C-02", {e["ubicacion"] for e in res["errores"]}, res["errores"])
+
+    def test_copia_archivada_inventada(self):
+        """Una «copia archivada» que no se ha comprobado en el caso no puede sostener una fuente."""
+        inventada = "https://web.archive.org/web/20261109144155/http://example.com/texto"
+        self.reescribir("evidencias/captura.md", f"- **Copia archivada:** {ej.URL_COPIA}", f"- **Copia archivada:** {inventada}")
+        errores = {(e["codigo"], e["ubicacion"]) for e in n.validar(self.caso)["errores"]}
+        self.assertIn(("copia_no_registrada", "E-C-01"), errores)
+
+    def test_registrar_copias(self):
+        from bulonator.nucleo.archivo_web import registrar_copias
+
+        registrar_copias(self.caso, "https://a.es/x", {"primera_copia": {"url": "https://web.archive.org/web/1/https://a.es/x",
+                                                                         "fecha": "1"}, "copia_mas_reciente": None})
+        self.assertEqual(n.RegistroPaginas(self.caso).de("https://web.archive.org/web/1/https://a.es/x")[0]["origen"],
+                         "wayback")
+
+    def test_fuentes_solo_obligatorias_si_la_calificacion_afirma_algo(self):
+        texto = (self.caso / "informe.md").read_text(encoding="utf-8")
+        sin_fuentes = texto.split("## Fuentes")[0].replace("[1]", "").replace("[2]", "").replace("[3]", "") + \
+            "## Fuentes\n\n## Metodología y transparencia\n"
+        (self.caso / "informe.md").write_text(sin_fuentes, encoding="utf-8")
+        res = n.validar(self.caso)
+        self.assertIn("sin_fuentes", self.codigos(res))  # un FALSO sin fuentes, no
+        self.assertIn("ausencia de pruebas", next(e["detalle"] for e in res["errores"] if e["codigo"] == "sin_fuentes"))
+        alerta = sin_fuentes.replace("❌ FALSO", "⚠️ ALERTA").replace("**Calificación:** FALSO (inventado)",
+                                                                      "**Calificación:** ALERTA")
+        (self.caso / "informe.md").write_text(alerta, encoding="utf-8")
+        res = n.validar(self.caso)
+        self.assertNotIn("sin_fuentes", self.codigos(res))
+        self.assertIn("sin_fuentes", self.codigos(res, "avisos"))
+
+    def test_publicacion_obligatoria_vacia(self):
+        self.reescribir("publicacion.md", "*❌ FALSO*: no existe esa paga.\n\nFuente: " + ej.URL_MONCLOA, "")
+        self.assertIn("publicacion_vacia", self.codigos(n.validar(self.caso)))
+
+    def test_afirmacion_sin_apartado(self):
+        self.assertNotIn("afirmacion_sin_apartado", self.codigos(n.validar(self.caso), "avisos"))
+        self.reescribir("informe.md", "### A1: El Gobierno aprueba una paga de 2.000 euros → FALSO (inventado)",
+                        "Sin apartado")
+        self.assertIn("afirmacion_sin_apartado", self.codigos(n.validar(self.caso), "avisos"))
+
     def test_enlace_al_original(self):
         self.reescribir("informe.md", "- **Formato y plataforma:** publicación en X [1].",
                         f"- **Formato y plataforma:** publicación en X [1]: {ej.URL_ORIGINAL}")

@@ -128,6 +128,7 @@ class Guion:
                         "auditor": [PALANTE]}
         self.salidas.update(cambios)
         self.verificador_inventa = cambios.pop("verificador_inventa", 0)  # nº de respuestas finales inventadas
+        self.informe_a1 = cambios.pop("informe_a1", INFORME_A1)
         self.llamadas: list = []
         self.modelo = FunctionModel(self, model_name="guion")
 
@@ -135,10 +136,10 @@ class Guion:
         papel = re.search(r"# Bulonator: (\w+)", info.instructions or "").group(1)
         previas = sum(1 for m in messages if isinstance(m, ModelResponse))
         self.llamadas.append((papel, previas, _texto_usuario(messages)))
-        final = info.output_tools[0].name
-
         def salida(datos):
-            return ModelResponse(parts=[ToolCallPart(final, datos)])
+            if not info.output_tools:  # salida «nativa» o «texto»: el modelo responde con el JSON
+                return ModelResponse(parts=[TextPart(json.dumps(datos, ensure_ascii=False))])
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, datos)])
 
         if papel == "verificador":
             if previas == 0:
@@ -146,10 +147,10 @@ class Guion:
             if previas == 1:
                 return ModelResponse(parts=[ToolCallPart("leer", {"url": ej.URL_BOE})])
             if previas - 2 < self.verificador_inventa:
-                malo = json.loads(json.dumps(INFORME_A1))
+                malo = json.loads(json.dumps(self.informe_a1))
                 malo["evidencias"][1]["cita_literal"] = "El Consejo de Ministros aprueba una paga de 2.000 euros"
                 return salida(malo)
-            return salida(INFORME_A1)
+            return salida(self.informe_a1)
         if papel == "auditor":
             ronda = int(re.search(r"Ronda (\d+)", _texto_usuario(messages)).group(1))
             lista = self.salidas["auditor"]
@@ -234,6 +235,8 @@ class TestAnalisisCompleto(BaseMotor):
         self.assertEqual(json.loads(caso.leer("resultado.json"))["calificacion"], "FALSO")
         self.assertEqual(nucleo.validar(caso.ruta)["ok"], True)
         self.assertEqual(caso.fallos, [])
+        self.assertTrue(all("resultado.json se genera después" in t for p, n, t in guion.de("auditor")))
+        self.assertTrue(all("nunca inventes una URL" in t for p, n, t in guion.de("redactor")))
 
     def test_reintento_por_cita_inventada(self):
         guion = Guion(verificador_inventa=1)
@@ -286,6 +289,134 @@ class TestAnalisisCompleto(BaseMotor):
         with self.assertRaises(CapturaVacia):
             self.analizar(Guion(), vacia=True)
 
+    def test_salida_nativa_y_como_texto_json(self):
+        """Con salida «nativa» o «texto», el modelo responde con el JSON y el caso llega igual al final."""
+        for modo in ("nativa", "texto"):
+            with self.subTest(salida=modo):
+                caso, _ = self.analizar(Guion(), salida=modo)
+                self.assertTrue(caso.validacion["ok"], caso.validacion["errores"])
+                self.assertEqual(caso.resultado.calificacion, "FALSO")
+        self.assertIn("responde solo con el objeto JSON", instrucciones("redactor", Config(salida="texto")))
+        self.assertIn("`final_result`", instrucciones("redactor", Config()))
+        self.assertIn("No hagas preguntas", instrucciones("verificador", Config()))
+
+    def test_ficha_minima_si_el_modelo_no_la_consigue(self):
+        guion = Guion()
+        original = guion.__call__
+
+        def sin_ficha(messages, info):
+            if "# Bulonator: captura" in (info.instructions or ""):
+                return ModelResponse(parts=[TextPart("¿Podrías darme más información?")])
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(sin_ficha, model_name="guion")
+        caso, eventos = self.analizar(guion, reintentos=0)
+        self.assertTrue(any(f.startswith("ficha de la captura") for f in caso.fallos))
+        ficha = caso.leer("01-captura.md")
+        self.assertIn("### E-C-01", ficha)
+        self.assertIn("sin modelo", ficha)
+        self.assertTrue(caso.validacion["ok"], caso.validacion["errores"])
+        self.assertTrue(any("ficha mínima" in e.mensaje for e in eventos))
+
+    def test_ficha_de_un_texto_sin_herramientas(self):
+        guion = Guion()
+        original = guion.__call__
+        visto = {}
+
+        def mirar(messages, info):
+            if "# Bulonator: captura" in (info.instructions or ""):
+                visto["herramientas"] = [t.name for t in info.function_tools]
+                visto["sin_herramientas"] = "no tienes herramientas" in info.instructions
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(mirar, model_name="guion")
+        servicios = servicios_falsos()
+
+        def capturar_texto(entrada, carpeta, **kw):
+            caso = Path(carpeta)
+            cap = {"entrada": ej.TEXTO_TUIT, "plataforma": "texto", "texto": ej.TEXTO_TUIT, "media": [], "avisos": []}
+            (caso / "captura.json").write_text(json.dumps(cap, ensure_ascii=False), encoding="utf-8")
+            RegistroPaginas(caso).registrar("captura://captura", ej.TEXTO_TUIT, "captura")
+            RegistroPaginas(caso).registrar(ej.URL_COPIA, "copia", "wayback")
+            return dict(cap, archivo_captura=str(caso / "captura.json"))
+
+        servicios.capturar = capturar_texto
+        asyncio.run(analizar(ej.TEXTO_TUIT, self.config(guion), servicios=servicios))
+        self.assertEqual(visto, {"herramientas": [], "sin_herramientas": True})
+        self.assertTrue(any("sin número de fuente" in t for p, n, t in guion.de("redactor")))
+
+    def test_sin_veredicto_de_respaldo_si_falla_la_redaccion(self):
+        guion = Guion()
+        original = guion.__call__
+
+        def sin_redactor(messages, info):
+            if "# Bulonator: redactor" in (info.instructions or ""):
+                return ModelResponse(parts=[TextPart('{"error": "no puedo"}')])
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(sin_redactor, model_name="guion")
+        caso, eventos = self.analizar(guion, reintentos=0)
+        r = caso.resultado
+        self.assertEqual((r.calificacion, r.confianza), ("SIN VEREDICTO", "BAJA"))
+        self.assertEqual((r.auditoria.dictamen, r.auditoria.cierre, r.auditoria.aprobado), ("VETO", True, False))
+        self.assertFalse(caso.aprobado)
+        self.assertTrue(caso.validacion["ok"], caso.validacion["errores"])
+        self.assertTrue(any(f.startswith("redacción") for f in caso.fallos))
+        self.assertIn("No hay auditoría", caso.leer("03-auditoria.md"))
+        self.assertIn("⏸️ SIN VEREDICTO", caso.publicacion)
+        self.assertEqual(len(guion.de("auditor")), 0)
+
+    def test_afirmacion_deducida_del_prefijo(self):
+        sin = json.loads(json.dumps(INFORME_A1))
+        for ev in sin["evidencias"]:
+            del ev["afirmacion"]
+        caso, _ = self.analizar(Guion(informe_a1=sin))
+        self.assertIn("- **Afirmación:** A1", caso.leer("evidencias/verificador-A1.md"))
+        from bulonator.motor.proceso import _afirmacion_del_prefijo
+
+        self.assertEqual([_afirmacion_del_prefijo(p) for p in ("E-A3-", "E-M2-", "E-O-", None)],
+                         ["A3", "M2", "contenido", "contenido"])
+
+    def test_limite_de_peticiones_pide_la_salida(self):
+        """Si un papel agota sus peticiones investigando, se le pide la salida con lo que tiene."""
+        guion = Guion()
+        original = guion.__call__
+
+        def sin_fin(messages, info):
+            if "# Bulonator: verificador" in (info.instructions or ""):
+                todo = " ".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", []))
+                if "límite de peticiones" in todo:
+                    return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, INFORME_A1)])
+                previas = sum(1 for m in messages if isinstance(m, ModelResponse))
+                url = ej.URL_MONCLOA if previas % 2 == 0 else ej.URL_BOE
+                return ModelResponse(parts=[ToolCallPart("leer", {"url": url})])  # nunca termina por sí solo
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(sin_fin, model_name="guion")
+        caso, eventos = self.analizar(guion, max_peticiones=4)
+        self.assertFalse(any(f.startswith("verificador") for f in caso.fallos), caso.fallos)
+        self.assertIn("### E-A1-02", caso.leer("evidencias/verificador-A1.md"))
+        self.assertTrue(any("límite de peticiones" in e.mensaje for e in eventos))
+        self.assertTrue(list((caso.ruta / "motor").glob("verificador-*-fallo.json")))
+        self.assertIn("como máximo 4 peticiones", instrucciones("verificador", Config(max_peticiones=4)))
+
+    def test_correccion_fallida_conserva_la_redaccion(self):
+        cambios = dict(CAMBIOS, afecta_a_calificacion_o_cifras=True)
+        guion = Guion(auditor=[cambios, cambios])
+        original = guion.__call__
+
+        def correccion_rota(messages, info):
+            if "# Bulonator: redactor" in (info.instructions or "") and "Dictamen de la auditoría" in _texto_usuario(messages):
+                return ModelResponse(parts=[TextPart('{"error": "no sé corregirlo"}')])
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(correccion_rota, model_name="guion")
+        caso, _ = self.analizar(guion, reintentos=0)
+        self.assertTrue(any(f.startswith("corrección tras la auditoría") for f in caso.fallos))
+        a = caso.resultado.auditoria
+        self.assertEqual((a.dictamen, a.cierre, a.aprobado), ("CAMBIOS", True, False))
+        self.assertEqual(caso.resultado.calificacion, "FALSO")  # la redacción anterior, no una vacía
+
     def test_un_verificador_que_falla_no_para_el_caso(self):
         guion = Guion()
         original = guion.__call__
@@ -299,6 +430,10 @@ class TestAnalisisCompleto(BaseMotor):
         caso, _ = self.analizar(guion, reintentos=0)
         self.assertTrue(any(f.startswith("verificador A1") for f in caso.fallos))
         self.assertTrue((caso.ruta / "resultado.json").is_file())
+        # Sin investigar la afirmación central, el caso no puede quedar aprobado y el redactor lo sabe
+        self.assertFalse(caso.resultado.auditoria.aprobado)
+        self.assertTrue(any("no se ha podido investigar" in f for f in caso.fallos))
+        self.assertTrue(any("no se ha podido investigar" in t for p, n, t in guion.de("redactor")))
 
 
 @unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
@@ -334,6 +469,40 @@ class TestPiezas(BaseMotor):
         H.wayback(ctx, "https://a.es", guardar=True)
         self.assertEqual(llamadas, [False])  # sin --archivar no se piden copias nuevas
         self.assertEqual(ctx.deps.llamadas[-1]["herramienta"], "wayback")
+
+    def test_leer_avisa_tras_varias_url_fallidas(self):
+        ctx, _ = self.ctx()
+        respuestas = [H.leer(ctx, f"https://no-existe.es/{i}") for i in range(3)]
+        self.assertNotIn("aviso", respuestas[1])
+        self.assertIn("no adivines URL", respuestas[2]["aviso"])
+
+    def test_esquemas_tolerantes_con_formatos_casi_correctos(self):
+        casi = json.loads(json.dumps(REDACCION))
+        casi["que_circula"] = "Un texto que afirma que habrá una paga."
+        casi["apartados"] = [{"id": "A1", "titulo": "Paga", "calificacion": "FALSO (inventado)",
+                              "razonamiento": "No consta [2].", "evidencias": "E-A1-02"}]
+        casi["publicaciones"] = {"breve": {"text": BREVE}, "hilo_x": {"text": "1/ ❌ FALSO: no existe"},
+                                 "mensajeria": {"texto": "*❌ FALSO*"}, "largo": [{"text": "a"}, {"text": "b"}]}
+        r = Redaccion.model_validate(casi)
+        self.assertEqual(r.que_circula, ["Un texto que afirma que habrá una paga."])
+        for escrita, esperada in (("alerta (sin pruebas)", "ALERTA (sin pruebas)"), ("❌ falso", "FALSO"),
+                                  ("descontextualizado", "descontextualizado")):
+            with self.subTest(valoracion=escrita):
+                a = dict(casi["apartados"][0], calificacion=escrita)
+                self.assertEqual(Redaccion.model_validate(dict(casi, apartados=[a])).apartados[0].valoracion, esperada)
+        self.assertEqual((r.apartados[0].valoracion, r.apartados[0].explicacion, r.apartados[0].evidencias),
+                         ("FALSO (inventado)", "No consta [2].", ["E-A1-02"]))
+        self.assertEqual((r.publicaciones.breve, r.publicaciones.hilo_x, r.publicaciones.largo),
+                         (BREVE, ["1/ ❌ FALSO: no existe"], "a\n\nb"))
+        for escrita, esperada in (("❌ FALSO", "FALSO"), ("💬 OPINIÓN", "NO VERIFICABLE"), ("falso (inventado)", "FALSO"),
+                                  ("⏸️ SIN VEREDICTO", "SIN VEREDICTO"), ("Bulo", "FALSO")):
+            with self.subTest(escrita=escrita):
+                self.assertEqual(InformeAgente.model_validate(dict(INFORME_A1, calificacion=escrita)).calificacion, esperada)
+        self.assertEqual(InformeAgente.model_validate(dict(ORIGEN, lagunas="una sola")).lagunas, ["una sola"])
+        self.assertIn("lista de evidencias vacía", instrucciones("verificador", Config()))
+        self.assertNotIn("lista de evidencias vacía", instrucciones("redactor", Config()))
+        with self.assertRaises(ValueError):  # las publicaciones obligatorias no pueden ir vacías
+            Redaccion.model_validate(dict(REDACCION, publicaciones=dict(REDACCION["publicaciones"], breve="  ")))
 
     def test_herramientas_por_papel(self):
         sin = Config()
@@ -379,6 +548,11 @@ class TestPiezas(BaseMotor):
         a = Analisis("x", Config(modo="rapido"))
         grupos, _ = a._encargos(d)
         self.assertEqual(grupos, [["A1"], ["A2", "A3", "A4", "A5", "A6"]])
+        # Encargos repetidos o con IDs de otro tipo: cada afirmación va a un solo verificador
+        repetidos = Desglose(como_se_entiende="x", afirmacion_central="A1", afirmaciones=afirmaciones[:2],
+                             encargos=[{"papel": "verificador", "ids": ["A1"]}, {"papel": "verificador", "ids": ["A1", "A1"]},
+                                       {"papel": "verificador", "ids": ["A2"]}])
+        self.assertEqual(Analisis("x", Config())._encargos(repetidos)[0], [["A1"], ["A2"]])
 
     def test_ida_y_vuelta_de_los_documentos(self):
         """Lo que escribe el motor lo leen igual validar y resultado (los del plugin)."""
@@ -413,8 +587,8 @@ class TestPiezas(BaseMotor):
             Evidencia.model_validate(dict(EV_BOE, tipo="blog"))
         with self.assertRaises(ValueError):
             InformeAgente.model_validate(dict(INFORME_A1, calificacion="BULO GORDO"))
-        with self.assertRaises(ValueError):
-            Desglose.model_validate(dict(DESGLOSE, afirmacion_central="A9"))
+        # Con una sola afirmación no hay ambigüedad: un ID inexistente se corrige
+        self.assertEqual(Desglose.model_validate(dict(DESGLOSE, afirmacion_central="A9")).afirmacion_central, "A1")
         self.assertEqual(Ficha.model_validate(FICHA).evidencias[0].id, "E-C-01")
 
 
@@ -538,12 +712,17 @@ class TestRamas(BaseMotor):
             if "# Bulonator: verificador" in (info.instructions or ""):
                 visto["nativas"] = [type(x).__name__ for x in info.model_request_parameters.native_tools]
                 visto["temperatura"] = (info.model_settings or {}).get("temperature")
+                visto["max_tokens"] = (info.model_settings or {}).get("max_tokens")
             return original(messages, info)
 
         guion.modelo = FunctionModel(mirar, model_name="guion")
         self.analizar(guion, buscador="nativo", temperatura=None)
         self.assertEqual(visto["nativas"], ["WebSearchTool"])
+        self.assertEqual(Analisis("x", Config(razonamiento="bajo"))._ajustes(),
+                         {"temperature": 0.2, "max_tokens": 16384, "timeout": 600, "thinking": "low"})
+        self.assertNotIn("thinking", Analisis("x", Config())._ajustes())
         self.assertIsNone(visto["temperatura"])
+        self.assertEqual(visto["max_tokens"], 16384)  # corta los bucles de generación de los modelos locales
 
 
 @unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
@@ -588,6 +767,27 @@ class TestEnvoltorios(BaseMotor):
                           "factcheck", "buscar_imagen"})
         self.assertTrue(all(ll["resultado"] == "2 resultados" for ll in ctx.deps.llamadas))
 
+    def test_boe_compacto_para_el_modelo(self):
+        caso = Path(nucleo.crear_caso("x", self.tmp.name)["caso"])
+        fila = {"identificador": "BOE-A-2006-20764", "titulo": "Ley 35/2006, del IRPF", "rango": "Ley",
+                "ambito": "Estatal", "departamento": "Jefatura del Estado", "fecha_disposicion": "20061128",
+                "fecha_publicacion": "20061129", "vigencia_agotada": "N", "url": "https://www.boe.es/x", "eli": "e"}
+        servicios = Servicios(boe=lambda *a, **k: {"consulta": "q", "resultados": [fila]})
+        ctx = types.SimpleNamespace(deps=Contexto(caso, Config(), servicios, "verificador", "E-A1-"))
+        self.assertEqual(set(H.boe(ctx, "IRPF")["resultados"][0]),
+                         {"identificador", "titulo", "rango", "fecha_publicacion", "vigencia_agotada", "url"})
+
+    def test_pista_si_se_llena_el_contexto(self):
+        from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+        from bulonator.motor.proceso import _con_pista
+
+        e = UnexpectedModelBehavior("Model token limit (16384) exceeded before any response was generated.")
+        self.assertIn("OLLAMA_CONTEXT_LENGTH=65536", str(_con_pista(e)))
+        otro = UnexpectedModelBehavior("Exceeded maximum output retries (3)")
+        self.assertIs(_con_pista(otro), otro)
+        self.assertIn("--concurrencia 1", str(_con_pista(RuntimeError("Request timed out."))))
+
     def test_errores_y_resumenes(self):
         self.assertEqual(H._resumen({"error": "x"}), "error: x")
         self.assertEqual(H._resumen({"primera_copia": {"url": "u"}}), "hay copias archivadas")
@@ -625,15 +825,15 @@ class TestCasosLimite(BaseMotor):
         vista = {}
 
         async def falso(entrada, config, al_progresar=None):
-            vista["modo"], vista["archivar"] = config.modo, config.archivar
+            vista["modo"], vista["archivar"], vista["concurrencia"] = config.modo, config.archivar, config.concurrencia
             al_progresar(Evento("captura", "hola"))
             raise PresupuestoAgotado("demasiado")
 
         buf, err = io.StringIO(), io.StringIO()
         with mock.patch("bulonator.motor.cli.analizar", falso), redirect_stdout(buf), mock.patch("sys.stderr", err):
             code = cli.main(["analizar", "https://x.com/a/status/1", "--config", str(toml), "--archivar",
-                             "--idioma", "en"])
-        self.assertEqual((code, vista), (5, {"modo": "profundo", "archivar": True}))
+                             "--idioma", "en", "--concurrencia", "1"])
+        self.assertEqual((code, vista), (5, {"modo": "profundo", "archivar": True, "concurrencia": 1}))
         self.assertIn("[captura] hola", err.getvalue())
 
     def test_esquemas_y_render_en_casos_limite(self):
@@ -650,8 +850,38 @@ class TestCasosLimite(BaseMotor):
             ElementoMultimedia.model_validate({"id": "X1", "que_se_dice_que_muestra": "a", "que_comprobar": "b"})
         with self.assertRaises(ValueError):
             Desglose.model_validate(dict(DESGLOSE, encargos=[{"papel": "verificador", "ids": ["A7"]}]))
-        with self.assertRaises(ValueError):
-            Desglose.model_validate(dict(DESGLOSE, afirmacion_central=None))
+        # El modelo escribe el texto en vez del ID: si no hay ambigüedad, se deduce
+        texto = DESGLOSE["afirmaciones"][0]["texto"]
+        self.assertEqual(Desglose.model_validate(dict(DESGLOSE, afirmacion_central=texto)).afirmacion_central, "A1")
+        self.assertEqual(Desglose.model_validate(dict(DESGLOSE, afirmacion_central=None)).afirmacion_central, "A1")
+        dos = [dict(DESGLOSE["afirmaciones"][0], prioridad="alta"), dict(DESGLOSE["afirmaciones"][0], id="A2", texto="Otra cosa distinta", prioridad="alta")]
+        with self.assertRaises(ValueError) as ctx:
+            Desglose.model_validate(dict(DESGLOSE, afirmaciones=dos, afirmacion_central="algo que no está"))
+        self.assertIn("tiene que ser el ID", str(ctx.exception))
+        # Nombres de campo alternativos, prefijo «bulonator-» y central escrita como texto (por parecido)
+        parecido = {"como_se_entiende": "x", "afirmacion_central": "El hermano del ex chófer de Sánchez, Cristian "
+                    "Corvillo, fue detenido y compró parte de la empresa de Aldama",
+                    "afirmaciones": [{"id": "A1", "afirmacion": "Cristian Corvillo, hermano del ex chófer de Sánchez, fue "
+                                      "detenido por la UCO.", "tipo": "dato", "quien_tiene_dato": "UCO", "prioridad": "Alta"},
+                                     {"id": "A2", "afirmacion": "En mayo de 2022, Corvillo Energy SL adquirió "
+                                      "participaciones de MTM 180 Capital SL.", "tipo": "dato",
+                                      "quien_tiene_dato": "Registro Mercantil", "prioridad": "rarísima"}],
+                    "encargos": [{"papel": "bulonator-verificador", "ids": ["A1"]}, {"papel": "Verificador", "ids": ["A2"]}]}
+        d = Desglose.model_validate(parecido)
+        self.assertEqual(d.afirmacion_central, "A1")
+        self.assertEqual([a.prioridad for a in d.afirmaciones], ["alta", "media"])
+        self.assertEqual(d.afirmaciones[1].quien_tendria_el_dato, "Registro Mercantil")
+        self.assertEqual([e.papel for e in d.encargos], ["verificador", "verificador"])
+        # El encargo del rastreo de origen se acepta y se descarta: el origen se rastrea siempre
+        con_origen = Desglose.model_validate(dict(DESGLOSE, encargos=[{"papel": "origen", "ids": ["contenido"]},
+                                                                      {"papel": "verificador", "ids": ["A1"]}]))
+        self.assertEqual([e.papel for e in con_origen.encargos], ["verificador"])
+        self.assertEqual(Ficha.model_validate(dict(FICHA, multimedia=[{"archivo": "media/m01.jpg", "texto_visible": "un cartel"},
+                                                                      {"archivo": "media/m02.jpg"}])).multimedia[1].descripcion,
+                         "sin describir")
+        sin_vacios = Desglose.model_validate(dict(DESGLOSE, encargos=[{"papel": "multimedia", "ids": []},
+                                                                      {"papel": "verificador", "ids": ["A1"]}]))
+        self.assertEqual([e.papel for e in sin_vacios.encargos], ["verificador"])
         with self.assertRaises(ValueError):
             InformeAgente.model_validate(dict(INFORME_A1, veredicto_multimedia="raro"))
         self.assertEqual(render._cita("dijo «hola, qué tal»"), "dijo «hola, qué tal»")
@@ -669,6 +899,164 @@ class TestCasosLimite(BaseMotor):
             self.assertIn(trozo, md)
         sin_nada = render.informe_agente_md("x", InformeAgente.model_validate(ORIGEN), [], "hoy")
         self.assertIn("no se hicieron búsquedas", sin_nada)
+
+
+@unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")
+class TestComprobacionesPrevias(BaseMotor):
+    """Lo que se comprueba antes de crear el caso: la URL de Ollama, sus modelos y las claves."""
+
+    def test_url_de_ollama(self):
+        from bulonator.motor import url_ollama
+
+        casos = {"": "http://localhost:11434/v1", "0.0.0.0": "http://localhost:11434/v1",
+                 "0.0.0.0:11500": "http://localhost:11500/v1", "gpu.local": "http://gpu.local:11434/v1",
+                 "https://ollama.ejemplo.es": "https://ollama.ejemplo.es:443/v1", "[::1]:11434": "http://[::1]:11434/v1"}
+        for host, esperado in casos.items():
+            with self.subTest(host=host), mock.patch.dict(os.environ, {"OLLAMA_HOST": host, "OLLAMA_BASE_URL": ""}):
+                self.assertEqual(url_ollama(), esperado)
+        with mock.patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://otro:1/v1/"}):
+            self.assertEqual(url_ollama(), "http://otro:1/v1")
+
+    def respuesta(self, *modelos):
+        return io.BytesIO(json.dumps({"data": [{"id": m} for m in modelos]}).encode())
+
+    def test_modelos_de_ollama(self):
+        from bulonator.motor import ModeloNoDisponible, comprobar_modelos
+
+        cfg = Config(modelos={"defecto": "ollama:gpt-oss:20b", "auditor": "ollama:llama3.2"})
+        with mock.patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://localhost:11434/v1"}):
+            with mock.patch("urllib.request.urlopen", return_value=self.respuesta("llama3.2:latest")):
+                with self.assertRaises(ModeloNoDisponible) as ctx:
+                    comprobar_modelos(cfg)
+            self.assertIn("ollama pull gpt-oss:20b", str(ctx.exception))
+            self.assertIn("llama3.2:latest", str(ctx.exception))
+            with mock.patch("urllib.request.urlopen", return_value=self.respuesta("gpt-oss:20b", "llama3.2:latest")):
+                comprobar_modelos(cfg)
+            import urllib.error
+
+            with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("conexión rechazada")):
+                with self.assertRaises(ModeloNoDisponible) as ctx:
+                    comprobar_modelos(cfg)
+            self.assertIn("no responde", str(ctx.exception))
+
+    def test_capacidades_de_ollama(self):
+        from bulonator.motor import ModeloNoDisponible, comprobar_modelos
+
+        def ollama(caps):
+            def responder(peticion, timeout=None):
+                url = peticion if isinstance(peticion, str) else peticion.full_url
+                if url.endswith("/models"):
+                    return self.respuesta("gpt-oss:20b")
+                self.assertTrue(url.endswith("/api/show"))
+                return io.BytesIO(json.dumps({"capabilities": caps}).encode())
+            return responder
+
+        cfg = Config(modelos={"defecto": "ollama:gpt-oss:20b"})
+        with mock.patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://localhost:11434/v1"}):
+            with mock.patch("urllib.request.urlopen", ollama(["completion", "tools", "thinking"])):
+                self.assertEqual(comprobar_modelos(cfg), {"ollama:gpt-oss:20b": {"completion", "tools", "thinking"}})
+            with mock.patch("urllib.request.urlopen", ollama(["completion"])), self.assertRaises(ModeloNoDisponible) as ctx:
+                comprobar_modelos(cfg)
+            self.assertIn("no admite herramientas", str(ctx.exception))
+
+    def test_sin_imagenes_si_el_modelo_no_las_ve(self):
+        guion = Guion()
+        original = guion.__call__
+        visto = {}
+
+        def mirar(messages, info):
+            if "# Bulonator: captura" in (info.instructions or ""):
+                contenido = next(p.content for p in messages[0].parts if isinstance(p, UserPromptPart))
+                visto["imagenes"] = 0 if isinstance(contenido, str) else sum(1 for x in contenido if not isinstance(x, str))
+                visto["nota"] = "No se adjuntan imágenes" in _texto_usuario(messages)
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(mirar, model_name="guion")
+        servicios = servicios_falsos()
+        capturar = servicios.capturar
+
+        def con_foto(entrada, carpeta, **kw):
+            res = capturar(entrada, carpeta, **kw)
+            foto = Path(carpeta) / "media" / "foto.png"
+            foto.write_bytes(PNG)
+            res["media"] = [{"tipo": "imagen", "archivo": str(foto)}]
+            return res
+
+        servicios.capturar = con_foto
+        with mock.patch("bulonator.motor.proceso.comprobar_modelos", return_value={"function:guion": {"completion", "tools"}}):
+            caso = asyncio.run(analizar(ej.URL_ORIGINAL, self.config(guion), servicios=servicios))
+        self.assertEqual(visto, {"imagenes": 0, "nota": True})
+        self.assertTrue(any("no es una copia" in x for p, n, x in guion.de("captura")))
+        self.assertIn("no ve imágenes", caso.leer("01-captura.md"))
+
+    def test_claves_y_modelos_objeto(self):
+        from bulonator.motor import ModeloNoDisponible, comprobar_modelos
+
+        comprobar_modelos(Config(modelos={"defecto": Guion().modelo}))  # los objetos Model no se comprueban
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": ""}), self.assertRaises(ModeloNoDisponible) as ctx:
+            comprobar_modelos(Config(modelos={"defecto": Guion().modelo, "auditor": "openai:un-modelo"}))
+        self.assertIn("openai:un-modelo", str(ctx.exception))
+
+    def test_un_papel_imprescindible_que_falla(self):
+        from bulonator.motor import AnalisisFallido
+
+        guion = Guion()
+        original = guion.__call__
+
+        def sin_desglose(messages, info):
+            if "# Bulonator: desglose" in (info.instructions or ""):
+                return ModelResponse(parts=[TextPart("no sé")])
+            return original(messages, info)
+
+        guion.modelo = FunctionModel(sin_desglose, model_name="guion")
+        with self.assertRaises(AnalisisFallido) as ctx:
+            self.analizar(guion, reintentos=0)
+        self.assertTrue((ctx.exception.caso / "01-captura.md").is_file())
+        # La conversación del papel que ha fallado queda guardada para poder depurarlo
+        guardadas = list((ctx.exception.caso / "motor").glob("desglose-*-fallo.json"))
+        self.assertEqual(len(guardadas), 1)
+        self.assertIn("no sé", guardadas[0].read_text(encoding="utf-8"))
+
+    def test_guardar_todas_las_conversaciones(self):
+        caso, _ = self.analizar(Guion(), guardar_conversaciones=True)
+        nombres = sorted(p.name for p in (caso.ruta / "motor").glob("*.json"))
+        self.assertIn("redactor-01.json", nombres)
+        self.assertTrue(any(n.startswith("verificador-") for n in nombres))
+        self.assertFalse(any("fallo" in n for n in nombres))
+
+    def test_sin_binarios(self):
+        from bulonator.motor.proceso import _sin_binarios
+
+        limpio = _sin_binarios({"parts": [{"content": [{"data": "A" * 5000, "media_type": "image/png"}, "texto"]}]})
+        self.assertEqual(limpio["parts"][0]["content"][0]["data"], "<5000 caracteres omitidos>")
+        self.assertEqual(limpio["parts"][0]["content"][1], "texto")
+
+    def test_consejo_si_el_modelo_no_entrega_la_salida(self):
+        from bulonator.motor import AnalisisFallido
+
+        async def falso(entrada, config, al_progresar=None):
+            raise AnalisisFallido(Path(self.tmp.name), "UnexpectedModelBehavior: Exceeded maximum output retries (3)")
+
+        buf, err = io.StringIO(), io.StringIO()
+        with mock.patch("bulonator.motor.cli.analizar", falso), redirect_stdout(buf), mock.patch("sys.stderr", err):
+            self.assertEqual(cli.main(["analizar", "algo", "--modelo", "ollama:x"]), 7)
+        self.assertIn("--salida nativa", json.loads(buf.getvalue())["siguiente_paso"])
+        self.assertIn("Siguiente paso:", err.getvalue())
+
+    def test_cli_con_errores_claros(self):
+        from bulonator.motor import AnalisisFallido, ModeloNoDisponible
+
+        for error, codigo in ((ModeloNoDisponible("Ollama no tiene x"), 6),
+                              (AnalisisFallido(Path(self.tmp.name), "UnexpectedModelBehavior: sin salida"), 7)):
+            async def falso(entrada, config, al_progresar=None, _e=error):
+                raise _e
+
+            buf, err = io.StringIO(), io.StringIO()
+            with self.subTest(codigo=codigo), mock.patch("bulonator.motor.cli.analizar", falso), \
+                    redirect_stdout(buf), mock.patch("sys.stderr", err):
+                self.assertEqual(cli.main(["analizar", "algo"]), codigo)
+                self.assertIn("Error:", err.getvalue())
+                self.assertIn("error", json.loads(buf.getvalue()))
 
 
 @unittest.skipUnless(HAY_MOTOR, "requiere pydantic-ai (pip install -e . -e ./motor) y Python 3.11+")

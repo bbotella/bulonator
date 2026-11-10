@@ -53,6 +53,7 @@ class Contexto:
     prefijo: Optional[str] = None
     ids_previos: set = field(default_factory=set)
     llamadas: list = field(default_factory=list)
+    urls_fallidas: int = 0
 
 
 def _resumen(resultado: Any) -> str:
@@ -109,7 +110,14 @@ def leer(ctx: RunContext[Contexto], url: str, desde: int = 0) -> dict:
         res = {"url": url, "titulo": entrada.get("titulo"), "caracteres": len(texto)}
     else:
         res = _llamar(ctx, "leer", {"url": url}, ctx.deps.servicios.leer, url, ctx.deps.caso, max_texto=0)
-        if "error" in res or "texto" not in res:
+        if "error" in res:
+            ctx.deps.urls_fallidas += 1
+            if ctx.deps.urls_fallidas >= 3:
+                res["aviso"] = (f"Ya van {ctx.deps.urls_fallidas} URL que no existen o no se pueden abrir: no adivines "
+                                "URL. Usa las URL que te den `buscar` y las demás herramientas o los datos del caso, o "
+                                "declara la laguna y entrega la salida.")
+            return res
+        if "texto" not in res:
             return res
         texto = res.pop("texto")
         res.pop("archivo", None)
@@ -129,10 +137,17 @@ def buscar(ctx: RunContext[Contexto], consulta: str, dominios: Optional[list[str
                    consulta, dominios or [], 8, cfg.buscador_local(), cfg.idioma, caso=ctx.deps.caso)
 
 
+_CAMPOS_BOE = ("identificador", "titulo", "rango", "fecha_publicacion", "vigencia_agotada", "url")
+
+
 def boe(ctx: RunContext[Contexto], texto: str, desde: Optional[str] = None, hasta: Optional[str] = None) -> dict:
     """Busca en el título de la legislación consolidada del BOE. Fechas en formato AAAAMMDD."""
-    return _llamar(ctx, "boe", {"texto": texto, "desde": desde, "hasta": hasta}, ctx.deps.servicios.boe,
-                   texto, desde, hasta, 15, caso=ctx.deps.caso)
+    res = _llamar(ctx, "boe", {"texto": texto, "desde": desde, "hasta": hasta}, ctx.deps.servicios.boe,
+                  texto, desde, hasta, 10, caso=ctx.deps.caso)
+    if isinstance(res.get("resultados"), list):  # menos campos: cada consulta ocupa menos contexto del modelo
+        res["resultados"] = [{k: r.get(k) for k in _CAMPOS_BOE if r.get(k) is not None} if isinstance(r, dict) else r
+                             for r in res["resultados"]]
+    return res
 
 
 def boe_sumario(ctx: RunContext[Contexto], fecha: str, texto: Optional[str] = None) -> dict:

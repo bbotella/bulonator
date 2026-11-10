@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .archivo_web import wayback_info, wayback_save
+from .archivo_web import registrar_copias, wayback_info, wayback_save
 from .extraccion import extract_page
 from .caso import RegistroPaginas
 from .red import (comprobar_destino, decode_body, download, guess_ext, host_of, http_get, http_json,
@@ -545,6 +545,8 @@ def capturar(entrada: str, carpeta, sin_media: bool = False, max_media: int = 8,
     out_file.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     RegistroPaginas(case).registrar(url, texto_de_captura(out), "captura", titulo=out.get("titulo"),
                                     url_final=out.get("url_final"))
+    if out.get("archivo_web"):
+        registrar_copias(case, url, out["archivo_web"])
     return dict(out, archivo_captura=str(out_file))
 
 

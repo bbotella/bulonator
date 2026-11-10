@@ -65,7 +65,7 @@ bulonator analizar "Desde enero los mayores de 65 pagarán un 20% más de IRPF" 
 bulonator analizar foto.jpg --config bulonator.toml --auditor openai:<modelo>
 ```
 
-El progreso sale por la salida de errores. Por la salida estándar sale un JSON con:
+El progreso y, si algo falla, el mensaje de error salen por la salida de errores. Por la salida estándar sale un JSON con:
 
 - la ruta del caso;
 - si está aprobado (`aprobado`);
@@ -79,6 +79,8 @@ El progreso sale por la salida de errores. Por la salida estándar sale un JSON 
 | 3 | El motor no está instalado o la versión de Python es anterior a la 3.11 |
 | 4 | No se pudo obtener el contenido. Consigue el texto, una captura de pantalla o el archivo |
 | 5 | Se ha agotado el presupuesto de tokens (`max_tokens_caso`) |
+| 6 | Un modelo no se puede usar: falta su clave, Ollama no responde o el modelo no está descargado. Se comprueba antes de crear el caso |
+| 7 | Un papel imprescindible (ficha, desglose o redacción) no ha podido terminar. El JSON indica la carpeta del caso con lo hecho |
 
 ### Como librería
 
@@ -138,13 +140,17 @@ auditor = "google:<modelo>"
 | `idioma` | `es` | Idioma de los textos para redes |
 | `archivar` | `false` | Solicita copias nuevas en la Wayback Machine |
 | `buscador` | `auto` | Ver [Búsqueda web](#búsqueda-web) |
-| `concurrencia` | 2 | Papeles que trabajan a la vez |
+| `concurrencia` | 2 | Papeles que trabajan a la vez. Con Ollama local, 1: las peticiones esperan en cola. En la terminal, `--concurrencia` |
 | `max_peticiones` | 40 | Límite de peticiones al modelo en cada ejecución de un papel |
 | `max_tokens_caso` | sin límite | Presupuesto total de tokens del caso. Al superarlo se lanza `PresupuestoAgotado` |
-| `reintentos` | 3 | Veces que se devuelve una salida al modelo cuando no supera la validación |
+| `reintentos` | 5 | Veces que se devuelve una salida al modelo cuando no supera la validación |
+| `salida` | `herramienta` | Cómo entrega cada papel su salida: `herramienta` (lo habitual), `nativa` (la salida JSON del proveedor; con Ollama, el modelo queda obligado a seguir el esquema) o `texto` (JSON en el texto). En la terminal, `--salida` |
 | `max_texto_herramienta` | 6000 | Caracteres que devuelve `leer` en cada llamada (los documentos largos se leen por trozos) |
 | `vision` / `max_imagenes` | `true` / 6 | Si se adjuntan imágenes y cuántas como máximo |
 | `temperatura` | 0.2 | Temperatura de los modelos (`null` para la del proveedor) |
+| `max_tokens_respuesta` | 16384 | Tokens como máximo en cada respuesta, razonamiento incluido: corta los bucles en los que a veces caen los modelos pequeños. Los modelos que razonan (como `gpt-oss`) necesitan margen |
+| `timeout_peticion` | 600 | Segundos como máximo por petición al modelo, contando la espera en la cola de Ollama |
+| `razonamiento` | el del proveedor | Cuánto razonan los modelos que razonan: `minimo`, `bajo`, `medio` o `alto`. Con `gpt-oss` en local, `bajo` acelera mucho y ahorra contexto. En la terminal, `--razonamiento` |
 | `permitir_red_privada` | `false` | Permite URL de la red local. **No lo actives en un servicio** |
 
 ## Modelos
@@ -157,7 +163,7 @@ Cada papel puede usar un modelo distinto. Algunas recomendaciones:
 
 | Proveedor | Texto del modelo | Configuración |
 |---|---|---|
-| Ollama (local) | `ollama:<modelo>`, por ejemplo `ollama:gpt-oss:20b` | `OLLAMA_BASE_URL` (por defecto `http://localhost:11434/v1`) |
+| Ollama (local) | `ollama:<modelo>`, por ejemplo `ollama:gpt-oss:20b` | `OLLAMA_BASE_URL`. Si no está definida, se deduce de `OLLAMA_HOST` o se usa `http://localhost:11434/v1` |
 | OpenAI | `openai:<modelo>` | `OPENAI_API_KEY` |
 | Google Gemini | `google:<modelo>` | `GOOGLE_API_KEY` |
 | Anthropic | `anthropic:<modelo>` | `ANTHROPIC_API_KEY` |
@@ -173,15 +179,23 @@ local = OpenAIChatModel("mi-modelo", provider=OpenAIProvider(base_url="http://lo
 config = Config(modelos={"defecto": local})
 ```
 
-### Ollama: amplía el contexto
+### Ollama: amplía el contexto y razona poco
 
-Cada papel recibe su metodología y sus referencias: entre 4.500 y 7.500 palabras, unos 7.000-12.000 tokens, más lo que lea. El contexto por defecto de Ollama es pequeño, así que **arráncalo con al menos 32.768 tokens de contexto**. Si los documentos son largos, mejor 65.536.
+Cada papel recibe su metodología y sus referencias: entre 4.500 y 7.500 palabras, unos 7.000-12.000 tokens, más lo que lea. El contexto por defecto de Ollama es pequeño, así que **arráncalo con al menos 32.768 tokens de contexto**. Con modelos que razonan antes de responder (como `gpt-oss`) o con documentos largos, mejor 65.536.
 
 ```bash
 OLLAMA_CONTEXT_LENGTH=32768 ollama serve
 ```
 
-En la aplicación de escritorio de Ollama, el contexto se cambia en los ajustes. Espera que los modelos locales cometan más errores que los grandes modelos comerciales. Por eso la validación mecánica rechaza citas y URL inventadas, y el auditor puede ser de otro proveedor.
+En la aplicación de escritorio de Ollama, el contexto se cambia en los ajustes. Con `gpt-oss:20b`, esta combinación es la que mejor ha funcionado en las pruebas:
+
+```bash
+bulonator analizar "<texto o enlace>" --modelo ollama:gpt-oss:20b --razonamiento bajo --concurrencia 1
+```
+
+Aun así, un caso tarda entre 15 y 40 minutos en un portátil, y conviene tener configurado un buscador ([Búsqueda web](#búsqueda-web)). Si un papel falla con `Model token limit … exceeded before any response was generated`, se ha llenado el contexto: sube `OLLAMA_CONTEXT_LENGTH` a 65.536 o baja el razonamiento con `--razonamiento bajo`. Si el modelo no entrega bien su salida estructurada (el error dice `Exceeded maximum output retries`), prueba con `--salida nativa`: Ollama obliga entonces al modelo a responder con JSON que cumple el esquema. Los modelos muy pequeños (de 3B, por ejemplo) no suelen bastar: se inventan URL y no usan bien las herramientas. Para empezar, `gpt-oss:20b` es una opción razonable.
+
+Espera que los modelos locales cometan más errores que los grandes modelos comerciales. Por eso la validación mecánica rechaza citas y URL inventadas, y el auditor puede ser de otro proveedor.
 
 ## Búsqueda web
 

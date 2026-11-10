@@ -39,8 +39,14 @@ def evidencia_md(ev: Evidencia, consultada: str) -> str:
     return f"### {ev.id}\n" + "\n".join(f"- **{k}:** {_linea(v)}" for k, v in filas) + "\n"
 
 
+def _consulta(c) -> str:
+    if isinstance(c, dict):
+        return ", ".join(f"{k}: {v}" for k, v in c.items() if v not in (None, "", []))
+    return str(c)
+
+
 def tabla_busquedas(llamadas: list, extra: list) -> str:
-    filas = [(str(ll.get("consulta")), ll["herramienta"], ll["resultado"]) for ll in llamadas]
+    filas = [(_consulta(ll.get("consulta")), ll["herramienta"], ll["resultado"]) for ll in llamadas]
     filas += [(b.consulta, b.herramienta, b.resultado) for b in extra]
     if not filas:
         filas = [("—", "—", "no se hicieron búsquedas")]
